@@ -1020,6 +1020,9 @@ func commitSQLTransaction(
 func (e *Executor) execStmt(
 	stmt parser.Statement, planMaker *planner, autoCommit bool,
 ) (Result, error) {
+
+	log.Warningf("WOO: %q %q // %q", planMaker.txn.Proto.OrigTimestamp, stmt, planMaker.semaCtx.Placeholders.Values)
+
 	var result Result
 	plan, err := planMaker.makePlan(stmt, autoCommit)
 	if err != nil {
@@ -1067,6 +1070,12 @@ func (e *Executor) execStmt(
 			values := plan.Values()
 
 			n := len(values)
+
+			if n > 0 {
+				if v, ok := values[0].(*parser.DInt); ok {
+					log.Warningf("WOO: %q SELECT VAL: %d", planMaker.txn.Proto.OrigTimestamp, int64(*v))
+				}
+			}
 			if len(valuesAlloc) < n {
 				valuesAlloc = make([]parser.Datum, len(result.Columns)*chunkSize)
 				if chunkSize < maxChunkSize {

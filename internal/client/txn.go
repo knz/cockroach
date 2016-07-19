@@ -668,6 +668,7 @@ func (txn *Txn) send(ba roachpb.BatchRequest) (*roachpb.BatchResponse, *roachpb.
 	}
 
 	br, pErr := txn.db.send(ba)
+
 	if elideEndTxn && pErr == nil {
 		// Check that read only transactions do not violate their deadline. This can NOT
 		// happen since the txn deadline is normally updated when it is about to expire

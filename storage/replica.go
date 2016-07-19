@@ -26,6 +26,7 @@ import (
 	"math/rand"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -820,6 +821,15 @@ func (r *Replica) Send(ctx context.Context, ba roachpb.BatchRequest) (*roachpb.B
 		return nil, roachpb.NewError(err)
 	}
 
+	if ba.Txn != nil && strings.Contains(ba.Txn.Name, "sql/executor") {
+		log.Warningf("WAA: %q seq=%d BATCH BEGIN", ba.Txn, int(ba.Txn.Sequence))
+		for _, ru := range ba.Requests {
+			req := ru.GetInner()
+			log.Warningf("WAA: %q // method %d, header %s, request %s", ba.Txn, req.Method(), req.Header(), req)
+		}
+		log.Warningf("WAA: %q BATCH END", ba.Txn)
+	}
+
 	ctx, cleanup := tracing.EnsureContext(ctx, r.store.Tracer())
 	defer cleanup()
 
@@ -850,6 +860,11 @@ func (r *Replica) Send(ctx context.Context, ba roachpb.BatchRequest) (*roachpb.B
 	if pErr != nil {
 		log.Trace(ctx, fmt.Sprintf("error: %s", pErr))
 	}
+
+	if ba.Txn != nil && strings.Contains(ba.Txn.Name, "sql/executor") {
+		log.Warningf("WAA: %q BATCH PROCESSED err = %q", ba.Txn, pErr)
+	}
+
 	return br, pErr
 }
 
@@ -1041,6 +1056,9 @@ func (r *Replica) applyTimestampCache(ba *roachpb.BatchRequest) *roachpb.Error {
 
 	if ba.Txn != nil {
 		r.mu.tsCache.ExpandRequests(ba.Txn.Timestamp)
+		if strings.Contains(ba.Txn.Name, "sql/executor") {
+			log.Warningf("UTS: %q START", ba.Txn)
+		}
 	} else {
 		r.mu.tsCache.ExpandRequests(ba.Timestamp)
 	}
@@ -1056,6 +1074,9 @@ func (r *Replica) applyTimestampCache(ba *roachpb.BatchRequest) *roachpb.Error {
 				key := keys.TransactionKey(header.Key, ba.GetTxnID())
 				wTS, wOK := r.mu.tsCache.GetMaxWrite(key, nil, nil)
 				if wOK {
+					if ba.Txn != nil && strings.Contains(ba.Txn.Name, "sql/executor") {
+						log.Warningf("UTS: %q REPLAY", ba.Txn)
+					}
 					return roachpb.NewError(roachpb.NewTransactionReplayError())
 				} else if !wTS.Less(ba.Txn.Timestamp) {
 					// This is a crucial bit of code. The timestamp cache is
@@ -1065,7 +1086,11 @@ func (r *Replica) applyTimestampCache(ba *roachpb.BatchRequest) *roachpb.Error {
 					// a replay. We move the timestamp forward and return retry.
 					// If it's really a replay, it won't retry.
 					txn := ba.Txn.Clone()
-					txn.Timestamp.Forward(wTS.Next())
+					tsNext := wTS.Next()
+					if strings.Contains(txn.Name, "sql/executor") {
+						log.Warningf("UTS: RETRY txn %q, moving forward to %q", txn, tsNext)
+					}
+					txn.Timestamp.Forward(tsNext)
 					return roachpb.NewErrorWithTxn(roachpb.NewTransactionRetryError(), &txn)
 				}
 				continue
@@ -1074,7 +1099,11 @@ func (r *Replica) applyTimestampCache(ba *roachpb.BatchRequest) *roachpb.Error {
 			// Forward the timestamp if there's been a more recent read.
 			rTS, _ := r.mu.tsCache.GetMaxRead(header.Key, header.EndKey, ba.GetTxnID())
 			if ba.Txn != nil {
-				ba.Txn.Timestamp.Forward(rTS.Next())
+				tsNext := rTS.Next()
+				if strings.Contains(ba.Txn.Name, "sql/executor") {
+					log.Warningf("UTS: batch txn %q moved forward to %q due to read", ba.Txn, tsNext)
+				}
+				ba.Txn.Timestamp.Forward(tsNext)
 			} else {
 				ba.Timestamp.Forward(rTS.Next())
 			}
@@ -1086,6 +1115,10 @@ func (r *Replica) applyTimestampCache(ba *roachpb.BatchRequest) *roachpb.Error {
 			wTS, _ := r.mu.tsCache.GetMaxWrite(header.Key, header.EndKey, ba.GetTxnID())
 			if ba.Txn != nil {
 				if !wTS.Less(ba.Txn.Timestamp) {
+					tsNext := wTS.Next()
+					if strings.Contains(ba.Txn.Name, "sql/executor") {
+						log.Warningf("UTS: batch txn %q moved forward to %q due to write", ba.Txn, tsNext)
+					}
 					ba.Txn.Timestamp.Forward(wTS.Next())
 					ba.Txn.WriteTooOld = true
 				}
@@ -1093,6 +1126,9 @@ func (r *Replica) applyTimestampCache(ba *roachpb.BatchRequest) *roachpb.Error {
 				ba.Timestamp.Forward(wTS.Next())
 			}
 		}
+	}
+	if ba.Txn != nil && strings.Contains(ba.Txn.Name, "sql/executor") {
+		log.Warningf("UTS: %q DONE", ba.Txn)
 	}
 	return nil
 }
