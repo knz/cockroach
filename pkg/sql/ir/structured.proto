@@ -1,0 +1,282 @@
+syntax = "proto2";
+package cockroach.sql.ir;
+option go_package = "ir";
+import "gogoproto/gogo.proto";
+
+message Type {
+    oneof t {
+	TBool t_bool = 1;
+	TInt t_int = 2;
+	TFloat t_float = 3;
+	TDecimal t_decimal = 4;
+	TString t_string = 5;
+	TBytes t_bytes = 6;
+	TTimestamp t_timestamp = 7;
+	TDate t_date = 8;
+	TInterval t_interval = 9;
+	TCString t_cstring = 10;
+	TTuple t_tuple = 11;
+	TArray t_array = 12;
+	TRecord t_record = 13;
+	TTable t_table = 14;
+	TOidWrapper t_oid_wrapper = 15;
+	TFunction t_function = 16;
+  }
+}
+
+message TBool {}
+message TInt { optional int32 width = 1; }
+message TFloat {}
+message TDecimal { optional int32 width = 1; optional int32 precision = 2; }
+message TString { optional int32 width = 1; }
+message TBytes { optional int32 width = 1; }
+message TTimestamp {}
+message TDate {}
+message TInterval {}
+message TCString { required string locale = 1; }
+message TTuple { repeated Type types = 1; }
+message TArray { required Type item_type = 1; }
+message TRecord { required int32 schema_id = 1; required int32 type_id = 2; }
+message TTable { repeated Type cols = 1; repeated string labels = 2; }
+message TOidWrapper { required Type type = 1; required int32 oid = 2; }
+message TFunction { repeated Type arg_types = 1; required Type return_type = 2; }
+
+message Datum {
+    oneof d {
+	DNull d_null = 1;
+	// Literals.
+	DBool d_bool = 2;
+	DInt d_int = 3;
+	DFloat d_float = 4;
+	DDecimal d_decimal = 5;
+	DString d_string = 6;
+	DBytes d_bytes = 7;
+	DTimestamp d_timestamp = 8;
+	DDate d_date = 9;
+	DInterval d_interval = 10;
+	DCString d_cstring = 11;
+	DTuple d_tuple = 12;
+	DArray d_array = 13;
+	DRecord d_record = 14;
+	DTable d_table = 15;
+	DFunction d_function = 16;
+
+	// More literals.
+	DNumVal d_numval = 17;
+	DStrVal d_strval = 18;
+    }
+}
+
+message DNumVal {
+    // id is the index of the literal in the NumVal array
+    // maintained by the scanner.
+    optional int32 id = 1;
+}
+message DStrVal {
+    // id is the index of the literal in the StrVal array
+    // maintained by the scanner.
+    optional int32 id = 1;
+}
+message DNull {}
+message DBool { required bool value = 1; }
+message DInt { required int64 value = 1; }
+message DFloat { required double value = 1; }
+message DDecimal { required bool sign = 1; repeated int64 mantissa = 2; required int32 exponent = 3; }
+message DString { required string value = 1; }
+message DBytes { required bytes value = 1; }
+message DTimestamp {
+    // seconds since the unix epoch. That's different from Go's time.Time.secs!
+    required int64 seconds = 1;
+    optional int32 nanoseconds = 2;
+}
+message DDate {
+    // value is the number of days since the unix epoch.
+    // can be computed from a timestamp with seconds / (24*60*60).
+    required int64 value = 1;
+}
+message DInterval {
+    // A duration of "1 month" cannot be represented as a fixed number of
+    // nanoseconds because the length of months vary. The same is true for days
+    // because of leap seconds. Given a begin or end time to anchor a duration, the
+    // nanosecond count can be calculated, but it's useful to represent durations
+    // such as "1 year 3 months" without an anchor. Interval allows this.
+    optional int64 months = 1;
+    optional int64 days = 2;
+    optional int64 nanoseconds = 3;
+}
+message DCString {
+    required string contents = 1;
+    required string locale = 2;
+    optional bytes key = 3;
+}
+
+message DTuple { repeated Datum tuple = 1; }
+message DArray { repeated int32 dims = 1; repeated Datum items = 2; }
+message DRecord { required int32 rec_type_id = 1;  repeated Datum fields = 2; }
+message DTable { repeated DTuple rows = 1; }
+message DFunction { required string id = 1; }
+
+message TypeExpr {
+    oneof t {
+	UnresolvedName te_u_name = 1;
+	UnresolvedTupleTy te_u_tuple = 2;
+	UnresolvedArrayTy te_u_array = 3;
+    }
+}
+message UnresolvedName { repeated NamePart name_parts = 1; }
+message NamePart {
+    oneof n {
+	string np_name = 1;
+	Star np_star = 2;
+	Expr np_index = 3;
+    }
+}
+message Star {}
+
+message UnresolvedTupleTy { repeated TypeExpr types = 1; }
+message UnresolvedArrayTy { required TypeExpr item_type = 1; }
+message TypeRef {
+    oneof t {
+	TypeExpr tr_unresolved = 1;
+	Type tr_type = 2;
+    }
+}
+
+message FuncRef {
+    oneof f {
+	UnresolvedName fr_u_name = 1;
+	BuiltinFunction fr_builtin = 2;
+	StoredFunction fr_stored = 3;
+	ImmediateFunction fr_immediate = 4;
+	EnvRef fr_env_ref = 5;
+    }
+}
+message BuiltinFunction {
+    required string version = 1;
+    required string name = 2;
+    optional int32 id = 3;
+}
+message StoredFunction {
+    required int32 database_id = 1;
+    required int32 schema_id = 2;
+    required int32 function_id = 3;
+}
+message ImmediateFunction {
+    repeated FunctionArgDef args = 1;
+    required Expr body = 2;
+}
+message FunctionArgDef { required string name = 1; required TypeRef type = 2; }
+
+message EnvRef { required int32 id = 1; }
+message ColRef { required int32 id = 1; }
+
+message Expr {
+    optional int64 metadata_id = 1;
+    oneof e {
+	Datum e_datum = 2;
+	ERow e_row = 3;
+	EArray e_array = 4;
+	EDefault e_default = 5;
+	EPlaceholder e_placeholder = 6;
+	EName e_name = 7;
+	EnvRef e_env_ref = 8;
+	ColRef e_col_ref = 9;
+	ECall e_apply = 10;
+	FuncRef e_func_ref = 11;
+	ESubquery e_subquery = 12;
+	EAnnotate e_annotate = 13;
+	ECast e_cast = 14;
+	EIsOf e_is_of = 15;
+	ECoalesce e_coalesce = 16;
+	ENullIf e_nullif = 17;
+	ECase e_case = 18;
+	ESearchedCase e_searched_case = 19;
+	ECompare e_compare = 20;
+	EArith e_arith = 21;
+	EUnary e_unary = 29;
+	EAnd e_and = 22;
+	EOr e_or = 23;
+	ENot e_not = 28;
+	EIndirection e_indirection = 24;
+	EFlatten e_flatten = 25;
+	EExists e_exists = 26;
+	ECollate e_collate = 27;
+    }
+}
+
+message ERow { repeated Expr exprs = 1; }
+message EArray { repeated Expr exprs = 1; }
+message EDefault { }
+message EName { repeated string part = 1; }
+message EColRef { required int32 id = 1; }
+message ECall {
+    required Expr function = 1;
+    repeated Expr arguments = 2;
+    optional bool distinct = 3;
+}
+message ESubquery { required TableExpr subquery = 1; }
+message EAnnotate { required TypeRef type = 1; required Expr expr = 2; }
+message EPlaceholder { required int32 id = 1; }
+message ECast { required TypeRef type = 1; required Expr expr = 2; }
+message EIsOf { required Expr expr = 1; repeated TypeRef types = 2; }
+message ECoalesce { repeated Expr exprs = 1; }
+message ENullIf { required Expr left = 1; required Expr right = 2; }
+message ECase { required Expr cond = 1; repeated CaseWhen when_exprs = 2; optional Expr else_expr = 3; }
+message ESearchedCase { required Expr cond = 1; repeated CaseWhen when_exprs = 2; optional Expr else_expr = 3; }
+message CaseWhen { required Expr cond = 1; required Expr result = 2; }
+message EAggCall { required ECall call = 1; required bool distinct = 2; }
+message EAnd { required Expr left = 1; required Expr right = 2; }
+message EOr { required Expr left = 1; required Expr right = 2; }
+message ENot { required Expr expr = 1; }
+message EIndirection { required Expr array = 1; required Expr index = 2; }
+message EFlatten { required ESubquery expr = 1; }
+message EExists { required ESubquery expr = 1; optional bool inverted = 2; }
+message ECollate { required Expr expr = 1; required string locale = 2; }
+message ECompare {
+    required Expr left = 1;
+    required Expr right = 2;
+    required Comp op = 3;
+    required CompMode mode = 4;
+    optional int32 compare_fn = 5;
+}
+message EUnary {
+    required Expr expr = 1;
+    required Unary op = 2;
+}
+enum Unary { Neg = 1; Compl = 2; }
+message EArith {
+    required Expr left = 1;
+    required Expr right = 2;
+    required Arith op = 3;
+}
+enum Arith {
+    Add = 1; Sub = 2; Mul = 3; Div = 4; FloorDiv = 5; Mod = 6;
+    BitAnd = 7; BitOr = 8; BitXor = 9; LeftShift = 10; RightShift = 11;
+}
+
+enum CompMode { Single = 1; Any = 2; All = 3; }
+enum Comp {
+    EQ = 1; NE = 2;
+    LT = 3; GE = 4;
+    GT = 5; LE = 6;
+    Is = 7; IsNot = 8;
+    In = 9; NotIn = 10;
+    Like = 11; NotLike = 12;
+    ILike = 13; NotILike = 14;
+    RegMatch = 15; NotRegMatch = 16;
+    RegIMatch = 17; NotRegIMatch = 18;
+    SimilarTo = 19; NotSimilarTo = 20;
+}
+
+message TableExpr {
+    oneof t {
+	TValues t_values = 1;
+	TSelectClause t_select_clause = 2;	
+	TJoin t_join = 3;
+	TSetOp t_set_op = 4;
+	TAlias t_alias = 5;
+	TSort t_sort = 6;
+	TLimit t_limit = 7;
+	TWith t_with = 8;
+    }
+}
