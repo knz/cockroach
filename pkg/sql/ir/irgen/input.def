@@ -1,0 +1,19 @@
+sum Expr = Paren | Add | AddConst | Tuple | Array | Const;
+
+def Const {
+  val int64;
+  sql `{{ .Val }}`
+}
+
+def Paren {
+  single Indir;
+  group Indir*;
+}
+
+def Indir {
+  e Expr;
+}
+def Add { left Expr; right Expr; }
+def AddConst { left Expr; right int64; }
+def Tuple { exprs Expr*; }
+def Array { vals int64*; }

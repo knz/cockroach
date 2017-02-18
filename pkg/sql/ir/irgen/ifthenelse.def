@@ -1,0 +1,10 @@
+sum Stmt = If | Basic ;
+def Basic { sql `BASIC` }
+def If {
+  cond int64;
+  then Stmt;
+  else Stmt;
+
+  sql `IF {{ .Cond }} THEN {{ template "Stmt" .XThen }} {{if .XElse.V }}ELSE {{ template "Stmt" .XElse }} {{end}}END`
+}
+
