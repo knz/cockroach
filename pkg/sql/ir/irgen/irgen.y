@@ -18,7 +18,7 @@ package main
 %type <nl> name_list
 %type <str> opt_sql
 %token <str> IDENT STR
-%token SUM DEF IDENT ERROR SQL PACKAGE
+%token SUM DEF IDENT ERROR SQL PACKAGE ENUM
 
 %%
 
@@ -36,6 +36,8 @@ tdecl_list:
 tdecl:
   SUM IDENT '=' name_list ';'
   { $$ = def{name:$2, pos:irgenlex.(*Scanner).lastPos, t:union, u:$4, f:nil, sql:""} }
+| ENUM IDENT '=' name_list ';'
+  { $$ = def{name:$2, pos:irgenlex.(*Scanner).lastPos, t:enum, u:$4, f:nil, sql:""} }
 | DEF IDENT '{' field_list opt_sql '}' opt_semi
   { $$ = def{name:$2, pos:irgenlex.(*Scanner).lastPos, t:rec, u:nil, f:$4, sql:$5} }
 ;

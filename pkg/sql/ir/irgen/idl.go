@@ -5,6 +5,7 @@ type defType int
 const (
 	union defType = 1
 	rec           = 2
+	enum          = 3
 )
 
 type nameList []string
