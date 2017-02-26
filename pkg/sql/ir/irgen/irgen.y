@@ -18,7 +18,7 @@ package main
 %type <nl> name_list
 %type <str> opt_sql
 %token <str> IDENT STR
-%token SUM DEF IDENT ERROR SQL PACKAGE ENUM
+%token SUM DEF IDENT ERROR SQL ENUM
 
 %%
 
