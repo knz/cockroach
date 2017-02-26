@@ -1,0 +1,258 @@
+sum Type =
+| TArray
+| TBool
+| TBytes
+| TCString
+| TDate
+| TDecimal
+| TFloat
+| TFunction
+| TInt
+| TInterval
+| TOidWrapper
+| TRecord
+| TString
+| TTable
+| TTimestamp
+| TTuple
+;
+
+def TArray {  item_type Type ; }
+def TBool {}
+def TBytes {  width int32 ; }
+def TCString {  locale string ; }
+def TDate {}
+def TDecimal {  width int32 ;  precision int32 ; }
+def TFloat {}
+def TFunction { arg_types Type* ;  return_type Type ; }
+def TInt {  width int32 ; }
+def TInterval {}
+def TOidWrapper {  t Type ;  oid int32 ; }
+def TRecord {  schema_id int32 ;  type_id int32 ; }
+def TString {  width int32 ; }
+def TTable { cols Type* ; labels string* ; }
+def TTimestamp {}
+def TTuple { types Type *; }
+
+sum Datum =
+|  DNull
+|  DBool
+|  DInt
+|  DFloat
+|  DDecimal
+|  DString
+|  DBytes
+|  DTimestamp
+|  DDate
+|  DInterval
+|  DCString
+|  DTuple
+|  DArray
+|  DRecord
+|  DTable
+|  DFunction
+|  DNumVal
+|  DStrVal
+;
+
+def DNumVal {
+    // id is the index of the literal in the NumVal array
+    // maintained by the scanner.
+    id int32 ;
+}
+def DStrVal {
+    // id is the index of the literal in the StrVal array
+    // maintained by the scanner.
+    id int32 ;
+}
+def DNull {}
+def DBool {  value bool ; }
+def DInt {  value int64 ; }
+def DFloat {  value double ; }
+def DDecimal {  sign bool ; mantissa int64* ;  exponent int32* ; }
+def DString {  value string ; }
+def DBytes {  value bytes ; }
+def DTimestamp {
+    // seconds since the unix epoch. That's different from Go's time.Time.secs!
+     seconds int64 ;
+     nanoseconds int32 ;
+}
+def DDate {
+    // value is the number of days since the unix epoch.
+    // can be computed from a timestamp with seconds / (24*60*60).
+     value int64 ;
+}
+def DInterval {
+    // A duration of "1 month" cannot be represented as a fixed number of
+    // nanoseconds because the length of months vary. The same is true for days
+    // because of leap seconds. Given a begin or end time to anchor a duration, the
+    // nanosecond count can be calculated, but it's useful to represent durations
+    // such as "1 year 3 months" without an anchor. Interval allows this.
+     months int64 ;
+     days int64 ;
+     nanoseconds int64 ;
+}
+def DCString {
+     contents string ;
+     locale string ;
+     key bytes ;
+}
+
+def DTuple { tuple Datum* ; }
+def DArray { dims int32 ; items Datum* ; }
+def DRecord {  rec_type_id int32;  fields Datum* ; }
+def DTable { rows DTuple* ; }
+def DFunction {  id string ; }
+
+sum TypeExpr =
+| UnresolvedName
+|	UnresolvedTupleTy
+|	UnresolvedArrayTy    ;
+
+def UnresolvedName {  name_parts NamePart*; }
+sum NamePart =	string|	Star|	Expr;
+def Star {}
+
+def UnresolvedTupleTy { types TypeExpr* ; }
+def UnresolvedArrayTy { item_type TypeExpr ; }
+sum TypeRef = TypeExpr | Type ;
+
+sum FuncRef =
+| UnresolvedName
+|	BuiltinFunction
+|	StoredFunction
+|	ImmediateFunction
+|	EnvRef    ;
+
+def BuiltinFunction {
+     version string ;
+     name string ;
+     id int32 ;
+}
+def StoredFunction {
+     database_id int32 ;
+     schema_id   int32 ;
+     function_id int32 ;
+}
+def ImmediateFunction {
+    args FunctionArgDef * ;
+    body Expr ;
+}
+def FunctionArgDef {  name string ;  t TypeRef ; }
+
+def EnvRef {  id int32 ; }
+def ColRef {  id int32 ; }
+
+sum Expr =	Datum
+|	ERow
+|	EArray
+|	EDefault
+|	EPlaceholder
+|	EName
+|	EnvRef
+|	ColRef
+|	ECall
+|	FuncRef
+|	ESubquery
+|	EAnnotate
+|	ECast
+|	EIsOf
+|	ECoalesce
+|	ENullIf
+|	ECase
+|	ESearchedCase
+|	ECompare
+|	EArith
+|	EUnary
+|	EAnd
+|	EOr
+|	ENot
+|	EIndirection
+|	EFlatten
+|	EExists
+|	ECollate     ;
+
+def ERow { exprs Expr* ; }
+def EArray { exprs Expr* ; }
+def EDefault { }
+def EName { part string* ; }
+def EColRef {  id int32 ; }
+def ECall {
+     function Expr ;
+     arguments Expr* ;
+     distinct bool ;
+}
+def ESubquery {  subquery TableExpr ; }
+def EAnnotate {  t TypeRef ;  expr Expr ; }
+def EPlaceholder {  id int32 ; }
+def ECast {  t TypeRef ;  expr Expr ; }
+def EIsOf {  expr Expr ; types TypeRef* ; }
+def ECoalesce { exprs Expr* ; }
+def ENullIf {  left Expr ;  right Expr ; }
+def ECase {  cond Expr ; when_exprs CaseWhen* ;  else_expr Expr ; }
+def ESearchedCase {  cond Expr ; when_exprs CaseWhen* ;  else_expr Expr; }
+def CaseWhen {  cond Expr ;  result Expr ; }
+def EAggCall {  call ECall ;  distinct bool ; }
+def EAnd {  left Expr ;  right Expr ; }
+def EOr {  left Expr ;  right Expr ; }
+def ENot {  expr Expr ; }
+def EIndirection {  array Expr ;  index Expr ; }
+def EFlatten {  expr ESubquery ; }
+def EExists {  expr ESubquery ;  inverted bool ; }
+def ECollate {  expr Expr ;  locale string ; }
+def ECompare {
+     left Expr ;
+     right Expr ;
+     op Comp ;
+     mode CompMode ;
+     compare_fn int32;
+}
+def EUnary {
+     expr Expr ;
+     op Unary ;
+}
+enum Unary = Neg | Compl ;
+def EArith {
+     left Expr ;
+     right Expr ;
+     op Arith ;
+}
+
+ enum Arith =
+     Add | Sub | Mul | Div | FloorDiv | Mod |
+     BitAnd | BitOr | BitXor | LeftShift | RightShift 
+ ;
+
+ enum CompMode = Single | Any | All ;
+
+ enum Comp =
+     EQ | NE |
+     LT | GE |
+     GT | LE |
+     Is | IsNot |
+     In | NotIn |
+     Like | NotLike |
+     ILike | NotILike |
+     RegMatch | NotRegMatch |
+     RegIMatch | NotRegIMatch |
+     SimilarTo | NotSimilarTo 
+ ;
+
+sum TableExpr =	TValues
+|	TSelectClause
+|	TJoin
+|	TSetOp
+|	TAlias
+|	TSort
+|	TLimit
+|	TWith    ;
+
+def TSelectClause {}
+def TJoin {}
+def TSetOp {}
+def TAlias {}
+def TSort {}
+def TLimit {}
+def TWith {}
+def TValues {}
+
