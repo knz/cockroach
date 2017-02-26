@@ -25,8 +25,16 @@ func (s *Scanner) Lex(lval *irgenSymType) int {
 	var tok token.Token
 	var pos token.Pos
 
-	pos, tok, lval.str = s.s.Scan()
-	s.lastPos = s.convPos(pos)
+	for {
+		pos, tok, lval.str = s.s.Scan()
+		s.lastPos = s.convPos(pos)
+		if tok == token.SEMICOLON && lval.str == "\n" {
+			// We don't want to see implicit semicolons. Just
+			// ignore them.
+			continue
+		}
+		break
+	}
 
 	switch tok {
 	case token.STRING:
