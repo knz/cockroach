@@ -43,6 +43,8 @@ func (s *Scanner) Lex(lval *irgenSymType) int {
 		return '='
 	case token.MUL:
 		return '*'
+	case token.PACKAGE:
+		return PACKAGE
 	case token.IDENT:
 		switch lval.str {
 		case "sum":

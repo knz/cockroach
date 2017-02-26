@@ -1,0 +1,7 @@
+def A{}
+def B{}
+
+sum T = A | B;
+def C{
+ c T;
+}
