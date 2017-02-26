@@ -650,7 +650,7 @@ import "gogoproto/gogo.proto";
 		d := p.m[name]
 		fmt.Fprintf(w, "enum %s {\n option (gogoproto.goproto_enum_prefix) = false;\n", name)
 		for i, e := range d.u {
-			fmt.Fprintf(w, " %s = %d;", e, i)
+			fmt.Fprintf(w, " %s = %d;\n", e, i)
 		}
 		fmt.Fprintf(w, "}\n")
 	}
@@ -702,6 +702,7 @@ func upperName(name string) string {
 	for i, c := range name {
 		if i == 0 || seenUnderscore {
 			buf.WriteRune(unicode.ToUpper(c))
+			seenUnderscore = false
 			continue
 		}
 		seenUnderscore = false
