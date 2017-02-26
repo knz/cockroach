@@ -106,6 +106,7 @@ func process(tbase string, pkg string, defs defList) {
 		}
 
 		p.m[d.name] = d
+		sort.Strings(p.m[d.name].u)
 		switch d.t {
 		case union:
 			p.unions[d.name] = struct{}{}
@@ -144,27 +145,31 @@ import "text/template"
 `, p.pkg)
 
 	tmpl := make(map[string]string)
+	var sqlnodenames []string
 	for _, name := range p.recnames {
 		d := p.m[name]
 		if d.sql != "" {
 			tmpl[name] = d.sql
+			sqlnodenames = append(sqlnodenames, name)
 		}
 	}
+	sort.Strings(sqlnodenames)
 
 	if len(tmpl) > 0 {
 		fmt.Fprintln(w, `import "bytes"`)
 	}
 
-	for name := range tmpl {
+	for _, name := range sqlnodenames {
 		fmt.Fprintf(w, "func (n *%s) FormatSQL(buf *bytes.Buffer) {", name)
 		fmt.Fprintf(w, " if err := tmpl%s.Execute(buf, n); err != nil { panic(err) } }\n", name)
 	}
-	for name := range tmpl {
+	for _, name := range sqlnodenames {
 		fmt.Fprintf(w, "func (n *%s) SQL() string { var buf bytes.Buffer; n.FormatSQL(&buf); return buf.String() }\n", name)
 	}
 
 	lastTemplate := "template"
-	for name, sql := range tmpl {
+	for _, name := range sqlnodenames {
+		sql := tmpl[name]
 		fmt.Fprintf(w, "var tmpl%s = func () *template.Template { ret, err := %s.New(%q).Parse(%s); if err != nil { panic(err) }; return ret }()\n",
 			name, lastTemplate, name, sql)
 		lastTemplate = "tmpl" + name
@@ -214,15 +219,17 @@ package %s
 	}
 	// Compute the invert set.
 	nonunionized := make(map[string]string)
+	var nonunionizednames []string
 	for _, name := range p.recnames {
 		if _, ok := unionized[name]; !ok {
 			nonunionized[name] = "*" + name
+			nonunionizednames = append(nonunionizednames, name)
 		}
 	}
 
 	// Generate the visitor interface.
 	fmt.Fprintf(w, "type Visitor struct {\n")
-	for name := range nonunionized {
+	for _, name := range nonunionizednames {
 		fmt.Fprintf(w, " VisitPre%s func(node *%s, copy *%s) (recurse bool, newNode *%s)\n", name, name, name, name)
 		fmt.Fprintf(w, " VisitPost%s func(node *%s, copy *%s) (newNode *%s)\n", name, name, name, name)
 	}
@@ -233,7 +240,7 @@ package %s
 	fmt.Fprintf(w, "}\n")
 
 	// Generate the (*Visitor).WalkXXX() jump methods.
-	for name := range nonunionized {
+	for _, name := range nonunionizednames {
 		fmt.Fprintf(w, "\nfunc (v *Visitor) Walk%s(c *AllocContext, node %s) (newNode %s, changed bool) {\n",
 			name, name, name)
 		fmt.Fprintf(w, " recurse, nodeRef := true, &node\n")
