@@ -96,7 +96,7 @@ func (s *Scanner) Lex(lval *sqlSymType) int {
 	}
 
 	switch lval.id {
-	case NOT, NULLS, WITH, AS:
+	case NOT, NULLS, WITH, AS, ',':
 	default:
 		s.lastTok = *lval
 		return lval.id
@@ -107,6 +107,11 @@ func (s *Scanner) Lex(lval *sqlSymType) int {
 
 	// If you update these cases, update lookaheadKeywords below.
 	switch lval.id {
+	case ',':
+		switch s.nextTok.id {
+		case PARTITION:
+			lval.id = COMMA_LA
+		}
 	case AS:
 		switch s.nextTok.id {
 		case OF:
@@ -885,6 +890,7 @@ var lookaheadKeywords = map[string]struct{}{
 	"like":       {},
 	"of":         {},
 	"ordinality": {},
+	"partition":  {},
 	"similar":    {},
 	"time":       {},
 }
