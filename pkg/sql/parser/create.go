@@ -683,7 +683,7 @@ func (node ListPartition) Format(buf *bytes.Buffer, f FmtFlags) {
 	buf.WriteString(` VALUES `)
 	for i, n := range node.Tuples {
 		if i > 0 {
-			buf.WriteString(", ")
+			buf.WriteString(" ")
 		}
 		FormatNode(buf, f, n)
 	}

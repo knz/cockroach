@@ -322,8 +322,14 @@ func (u *sqlSymUnion) interleave() *InterleaveDef {
 func (u *sqlSymUnion) partitionBy() *PartitionBy {
     return u.val.(*PartitionBy)
 }
+func (u *sqlSymUnion) listPartition() ListPartition {
+    return u.val.(ListPartition)
+}
 func (u *sqlSymUnion) listPartitions() []ListPartition {
     return u.val.([]ListPartition)
+}
+func (u *sqlSymUnion) rangePartition() RangePartition {
+    return u.val.(RangePartition)
 }
 func (u *sqlSymUnion) rangePartitions() []RangePartition {
     return u.val.([]RangePartition)
@@ -656,7 +662,9 @@ func (u *sqlSymUnion) transactionModes() TransactionModes {
 %type <*InterleaveDef> opt_interleave
 %type <*PartitionBy> opt_partition_by partition_by
 %type <[]ListPartition> list_partitions
+%type <ListPartition> list_partitions_item
 %type <[]RangePartition> range_partitions
+%type <RangePartition> range_partitions_item
 %type <[]*Tuple> list_partition_values
 %type <empty> opt_all_clause
 %type <bool> distinct_clause
@@ -2682,28 +2690,23 @@ partition_by:
   }
 
 list_partitions:
-  PARTITION unrestricted_name VALUES list_partition_values ',' list_partitions
+  list_partitions_item
   {
-    $$.val = append([]ListPartition{{
-      Name: Name($2),
-      Tuples: $4.tuples(),
-    }}, $6.listPartitions()...)
+    $$.val = []ListPartition{$1.listPartition()}
   }
-| PARTITION unrestricted_name VALUES list_partition_values partition_by ',' list_partitions
+| list_partitions ',' list_partitions_item
   {
-    $$.val = append([]ListPartition{{
+    $$.val = append($1.listPartitions(), $3.listPartition())
+  }
+
+list_partitions_item:
+  PARTITION unrestricted_name VALUES list_partition_values opt_partition_by
+  {
+    $$.val = ListPartition{
       Name: Name($2),
       Tuples: $4.tuples(),
       Subpartition: $5.partitionBy(),
-    }}, $7.listPartitions()...)
-  }
-| PARTITION unrestricted_name VALUES list_partition_values opt_partition_by
-  {
-    $$.val = []ListPartition{{
-      Name: Name($2),
-      Tuples: $4.tuples(),
-      Subpartition: $5.partitionBy(),
-    }}
+    }
   }
 
 list_partition_values:
@@ -2711,34 +2714,29 @@ list_partition_values:
   {
     $$.val = []*Tuple{{Exprs: $1.exprs()}}
   }
-| list_partition_values ',' ctext_row
+| list_partition_values ctext_row
   {
-    $$.val = append($1.tuples(), &Tuple{Exprs: $3.exprs()})
+    $$.val = append($1.tuples(), &Tuple{Exprs: $2.exprs()})
   }
 
 range_partitions:
-  PARTITION unrestricted_name VALUES LESS THAN ctext_row ',' range_partitions
+  range_partitions_item
   {
-    $$.val = append([]RangePartition{{
-      Name: Name($2),
-      Tuple: &Tuple{Exprs: $6.exprs()},
-    }}, $8.rangePartitions()...)
+    $$.val = []RangePartition{$1.rangePartition()}
   }
-| PARTITION unrestricted_name VALUES LESS THAN ctext_row partition_by ',' range_partitions
+| range_partitions ',' range_partitions_item
   {
-    $$.val = append([]RangePartition{{
+    $$.val = append($1.rangePartitions(), $3.rangePartition())
+  }
+
+range_partitions_item:
+  PARTITION unrestricted_name VALUES LESS THAN ctext_row opt_partition_by
+  {
+    $$.val = RangePartition{
       Name: Name($2),
       Tuple: &Tuple{Exprs: $6.exprs()},
       Subpartition: $7.partitionBy(),
-    }}, $9.rangePartitions()...)
-  }
-| PARTITION unrestricted_name VALUES LESS THAN ctext_row opt_partition_by
-  {
-    $$.val = []RangePartition{{
-      Name: Name($2),
-      Tuple: &Tuple{Exprs: $6.exprs()},
-      Subpartition: $7.partitionBy(),
-    }}
+    }
   }
 
 column_def:
