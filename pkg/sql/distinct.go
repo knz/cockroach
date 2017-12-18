@@ -134,8 +134,7 @@ func (p *planner) distinct(
 		// to fabricate an intermediate renderNode to add the new render.
 		if index == -1 && r != nil {
 			cols, exprs, hasStar, err := p.computeRenderAllowingStars(
-				ctx, tree.SelectExpr{Expr: expr}, types.Any,
-				r.sourceInfo, r.ivarHelper, autoGenerateRenderOutputName)
+				ctx, tree.SelectExpr{Expr: expr}, types.Any, r, autoGenerateRenderOutputName)
 			if err != nil {
 				return nil, nil, err
 			}

@@ -287,9 +287,8 @@ func (p *planner) constructWindowDefinitions(
 
 		// Validate PARTITION BY clause.
 		for _, partition := range windowDef.Partitions {
-			cols, exprs, _, err := p.computeRenderAllowingStars(ctx,
-				tree.SelectExpr{Expr: partition}, types.Any, s.sourceInfo, s.ivarHelper,
-				autoGenerateRenderOutputName)
+			cols, exprs, _, err := p.computeRenderAllowingStars(
+				ctx, tree.SelectExpr{Expr: partition}, types.Any, s, autoGenerateRenderOutputName)
 			if err != nil {
 				return err
 			}
@@ -300,9 +299,8 @@ func (p *planner) constructWindowDefinitions(
 
 		// Validate ORDER BY clause.
 		for _, orderBy := range windowDef.OrderBy {
-			cols, exprs, _, err := p.computeRenderAllowingStars(ctx,
-				tree.SelectExpr{Expr: orderBy.Expr}, types.Any, s.sourceInfo, s.ivarHelper,
-				autoGenerateRenderOutputName)
+			cols, exprs, _, err := p.computeRenderAllowingStars(
+				ctx, tree.SelectExpr{Expr: orderBy.Expr}, types.Any, s, autoGenerateRenderOutputName)
 			if err != nil {
 				return err
 			}

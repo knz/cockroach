@@ -383,8 +383,8 @@ func (p *planner) initTargets(
 			return err
 		}
 
-		cols, exprs, hasStar, err := p.computeRenderAllowingStars(ctx, newTarget, desiredType,
-			r.sourceInfo, r.ivarHelper, outputName)
+		cols, exprs, hasStar, err := p.computeRenderAllowingStars(
+			ctx, newTarget, desiredType, r, outputName)
 		if err != nil {
 			return err
 		}

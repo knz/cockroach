@@ -157,8 +157,7 @@ func (p *planner) orderBy(
 		// to fabricate an intermediate renderNode to add the new render.
 		if index == -1 && s != nil {
 			cols, exprs, hasStar, err := p.computeRenderAllowingStars(
-				ctx, tree.SelectExpr{Expr: expr}, types.Any,
-				s.sourceInfo, s.ivarHelper, autoGenerateRenderOutputName)
+				ctx, tree.SelectExpr{Expr: expr}, types.Any, s, autoGenerateRenderOutputName)
 			if err != nil {
 				return nil, err
 			}

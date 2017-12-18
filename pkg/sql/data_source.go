@@ -711,11 +711,6 @@ func (p *planner) getGeneratorPlan(ctx context.Context, t *tree.FuncExpr) (planD
 func (src *dataSourceInfo) expandStar(
 	v tree.VarName, ivarHelper tree.IndexedVarHelper,
 ) (columns sqlbase.ResultColumns, exprs []tree.TypedExpr, err error) {
-	if len(src.sourceColumns) == 0 {
-		return nil, nil, pgerror.NewErrorf(pgerror.CodeInvalidNameError,
-			"cannot use %q without a FROM clause", tree.ErrString(v))
-	}
-
 	colSel := func(idx int) {
 		col := src.sourceColumns[idx]
 		if !col.Hidden {

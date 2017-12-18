@@ -17,6 +17,7 @@ package sql
 import (
 	"golang.org/x/net/context"
 
+	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/types"
 	"github.com/cockroachdb/cockroach/pkg/sql/sqlbase"
@@ -59,8 +60,7 @@ func (p *planner) computeRenderAllowingStars(
 	ctx context.Context,
 	target tree.SelectExpr,
 	desiredType types.T,
-	info multiSourceInfo,
-	ivarHelper tree.IndexedVarHelper,
+	r *renderNode,
 	outputName string,
 ) (columns sqlbase.ResultColumns, exprs []tree.TypedExpr, hasStar bool, err error) {
 	// Pre-normalize any VarName so the work is not done twice below.
@@ -68,13 +68,14 @@ func (p *planner) computeRenderAllowingStars(
 		return nil, nil, false, err
 	}
 
-	if hasStar, cols, typedExprs, err := checkRenderStar(target, info, ivarHelper); err != nil {
+	if hasStar, cols, typedExprs, err := checkRenderStar(target, r); err != nil {
 		return nil, nil, false, err
 	} else if hasStar {
 		return cols, typedExprs, hasStar, nil
 	}
 
-	col, expr, err := p.computeRender(ctx, target, desiredType, info, ivarHelper, outputName)
+	col, expr, err := p.computeRender(
+		ctx, target, desiredType, r.sourceInfo, r.ivarHelper, outputName)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -153,7 +154,7 @@ func symbolicExprStr(expr tree.Expr) string {
 // name to one of the tables in the query and then expand the "*" into a list
 // of columns. A sqlbase.ResultColumns and Expr pair is returned for each column.
 func checkRenderStar(
-	target tree.SelectExpr, info multiSourceInfo, ivarHelper tree.IndexedVarHelper,
+	target tree.SelectExpr, r *renderNode,
 ) (isStar bool, columns sqlbase.ResultColumns, exprs []tree.TypedExpr, err error) {
 	v, ok := target.Expr.(tree.VarName)
 	if !ok {
@@ -166,7 +167,12 @@ func checkRenderStar(
 			return false, nil, nil, errors.Errorf("\"%s\" cannot be aliased", v)
 		}
 
-		columns, exprs, err = info[0].expandStar(v, ivarHelper)
+		if _, hasNoFromClause := r.source.plan.(*unaryNode); hasNoFromClause {
+			return false, nil, nil, pgerror.NewErrorf(pgerror.CodeInvalidNameError,
+				"cannot use %q without a FROM clause", tree.ErrString(v))
+		}
+
+		columns, exprs, err = r.sourceInfo[0].expandStar(v, r.ivarHelper)
 		return true, columns, exprs, err
 	default:
 		return false, nil, nil, nil

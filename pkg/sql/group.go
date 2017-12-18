@@ -209,8 +209,7 @@ func (p *planner) groupBy(
 	groupStrs := make(groupByStrMap, len(groupByExprs))
 	for _, g := range groupByExprs {
 		cols, exprs, hasStar, err := p.computeRenderAllowingStars(
-			ctx, tree.SelectExpr{Expr: g}, types.Any, r.sourceInfo, r.ivarHelper,
-			autoGenerateRenderOutputName)
+			ctx, tree.SelectExpr{Expr: g}, types.Any, r, autoGenerateRenderOutputName)
 		if err != nil {
 			return nil, nil, err
 		}
