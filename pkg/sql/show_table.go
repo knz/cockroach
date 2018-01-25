@@ -37,7 +37,7 @@ func (p *planner) showTableDetails(
 	if err != nil {
 		return nil, err
 	}
-	db := tn.Schema()
+	db := tn.Catalog()
 
 	initialCheck := func(ctx context.Context) error {
 		if err := checkDBExists(ctx, p, db); err != nil {
@@ -55,7 +55,7 @@ func (p *planner) showTableDetails(
 			lex.EscapeSQLString(db),
 			lex.EscapeSQLString(tn.Table()),
 			lex.EscapeSQLString(tn.String()),
-			tn.SchemaName.String()),
+			tn.CatalogName.String()),
 		initialCheck, nil)
 }
 

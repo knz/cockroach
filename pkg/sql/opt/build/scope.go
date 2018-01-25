@@ -86,6 +86,7 @@ func (s *scope) VisitPre(expr tree.Expr) (recurse bool, newExpr tree.Expr) {
 						// TODO(andy): why is this necessary??
 						t.TableName.TableName = tree.Name(col.table)
 						t.TableName.ExplicitSchema = false
+						t.TableName.ExplicitCatalog = false
 					}
 					return false, col
 				}

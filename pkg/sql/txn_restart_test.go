@@ -196,9 +196,9 @@ func checkRestarts(t *testing.T, magicVals *filterVals) {
 // Note that transaction cannot be aborted using an injected error, since we
 // want the pusher to clean up the intents of the pushee.
 //
-// The aborter only works with INSERT statements operating on the table t.test
+// The aborter only works with INSERT statements operating on the table t.public.test
 // defined as:
-//	`CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT)`
+//	`CREATE DATABASE t; CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT)`
 // The TxnAborter runs transactions deleting the row for the `k` that the
 // trapped transactions were writing to.
 //
@@ -223,8 +223,8 @@ func checkRestarts(t *testing.T, magicVals *filterVals) {
 //			}
 //		}
 //
-//		sqlDB.Exec(`CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT)`)
-//		const sentinelInsert = "INSERT INTO t.test(k, v) VALUES (0, 'sentinel')"
+//		sqlDB.Exec(`CREATE DATABASE t; CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT)`)
+//		const sentinelInsert = "INSERT INTO t.public.test(k, v) VALUES (0, 'sentinel')"
 //		if err := aborter.QueueStmtForAbortion(
 //			sentinelInsert, 1 /* abortCount */, true /* willBeRetriedIbid */,
 //		); err != nil {
@@ -384,7 +384,7 @@ func (ta *TxnAborter) abortTxn(key int) error {
 	if _, err := tx.Exec("SET TRANSACTION PRIORITY HIGH"); err != nil {
 		return err
 	}
-	if _, err := tx.Exec("DELETE FROM t.test WHERE k = $1", key); err != nil {
+	if _, err := tx.Exec("DELETE FROM t.public.test WHERE k = $1", key); err != nil {
 		return err
 	}
 	if err = tx.Commit(); err != nil {
@@ -469,7 +469,7 @@ func TestTxnAutoRetry(t *testing.T) {
 
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT, t DECIMAL);
+CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT, t DECIMAL);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -496,22 +496,22 @@ CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT, t DECIMAL);
 		}, false)
 
 	if err := aborter.QueueStmtForAbortion(
-		"INSERT INTO t.test(k, v, t) VALUES (1, 'boulanger', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
+		"INSERT INTO t.public.test(k, v, t) VALUES (1, 'boulanger', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
 	); err != nil {
 		t.Fatal(err)
 	}
 	if err := aborter.QueueStmtForAbortion(
-		"INSERT INTO t.test(k, v, t) VALUES (2, 'dromedary', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
+		"INSERT INTO t.public.test(k, v, t) VALUES (2, 'dromedary', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
 	); err != nil {
 		t.Fatal(err)
 	}
 	if err := aborter.QueueStmtForAbortion(
-		"INSERT INTO t.test(k, v, t) VALUES (3, 'fajita', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
+		"INSERT INTO t.public.test(k, v, t) VALUES (3, 'fajita', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
 	); err != nil {
 		t.Fatal(err)
 	}
 	if err := aborter.QueueStmtForAbortion(
-		"INSERT INTO t.test(k, v, t) VALUES (4, 'hooly', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
+		"INSERT INTO t.public.test(k, v, t) VALUES (4, 'hooly', cluster_logical_timestamp())", 2 /* abortCount */, true, /* willBeRetriedIbid */
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -532,16 +532,16 @@ CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT, t DECIMAL);
 	// current allocation count in monitor and checking that it has the
 	// same value at the beginning of each retry.
 	if _, err := sqlDB.Exec(`
-INSERT INTO t.test(k, v, t) VALUES (1, 'boulanger', cluster_logical_timestamp());
+INSERT INTO t.public.test(k, v, t) VALUES (1, 'boulanger', cluster_logical_timestamp());
 BEGIN;
-SELECT * FROM t.test;
-INSERT INTO t.test(k, v, t) VALUES (2, 'dromedary', cluster_logical_timestamp());
-INSERT INTO t.test(k, v, t) VALUES (3, 'fajita', cluster_logical_timestamp());
+SELECT * FROM t.public.test;
+INSERT INTO t.public.test(k, v, t) VALUES (2, 'dromedary', cluster_logical_timestamp());
+INSERT INTO t.public.test(k, v, t) VALUES (3, 'fajita', cluster_logical_timestamp());
 END;
-INSERT INTO t.test(k, v, t) VALUES (4, 'hooly', cluster_logical_timestamp());
+INSERT INTO t.public.test(k, v, t) VALUES (4, 'hooly', cluster_logical_timestamp());
 BEGIN;
-INSERT INTO t.test(k, v, t) VALUES (5, 'josephine', cluster_logical_timestamp());
-INSERT INTO t.test(k, v, t) VALUES (6, 'laureal', cluster_logical_timestamp());
+INSERT INTO t.public.test(k, v, t) VALUES (5, 'josephine', cluster_logical_timestamp());
+INSERT INTO t.public.test(k, v, t) VALUES (6, 'laureal', cluster_logical_timestamp());
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +555,7 @@ INSERT INTO t.test(k, v, t) VALUES (6, 'laureal', cluster_logical_timestamp());
 
 	// Check that the txns succeeded by reading the rows.
 	var count int
-	if err := sqlDB.QueryRow("SELECT count(*) FROM t.test").Scan(&count); err != nil {
+	if err := sqlDB.QueryRow("SELECT count(*) FROM t.public.test").Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count != 6 {
@@ -580,7 +580,7 @@ INSERT INTO t.test(k, v, t) VALUES (6, 'laureal', cluster_logical_timestamp());
 
 	// Start a txn.
 	if _, err := sqlDB.Exec(`
-DELETE FROM t.test WHERE true;
+DELETE FROM t.public.test WHERE true;
 BEGIN;
 `); err != nil {
 		t.Fatal(err)
@@ -593,7 +593,7 @@ BEGIN;
 	}
 
 	// Continue the txn in a new request, which is not retriable.
-	_, err := sqlDB.Exec("INSERT INTO t.test(k, v, t) VALUES (4, 'hooly', cluster_logical_timestamp())")
+	_, err := sqlDB.Exec("INSERT INTO t.public.test(k, v, t) VALUES (4, 'hooly', cluster_logical_timestamp())")
 	if !testutils.IsError(
 		err, "encountered previous write with future timestamp") {
 		t.Errorf("didn't get expected injected error. Got: %v", err)
@@ -620,9 +620,9 @@ func TestTxnAutoRetryParallelStmts(t *testing.T) {
 	// extra tables.
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test  (k INT PRIMARY KEY, v TEXT, t DECIMAL);
-CREATE TABLE t.test2 (k INT PRIMARY KEY, v TEXT, t DECIMAL);
-CREATE TABLE t.test3 (k INT PRIMARY KEY, v TEXT, t DECIMAL);
+CREATE TABLE t.public.test  (k INT PRIMARY KEY, v TEXT, t DECIMAL);
+CREATE TABLE t.public.test2 (k INT PRIMARY KEY, v TEXT, t DECIMAL);
+CREATE TABLE t.public.test3 (k INT PRIMARY KEY, v TEXT, t DECIMAL);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -636,9 +636,9 @@ CREATE TABLE t.test3 (k INT PRIMARY KEY, v TEXT, t DECIMAL);
 					firstRetry, secondRetry, thirdRetry)
 				t.Run(name, func(t *testing.T) {
 					if _, err := sqlDB.Exec(`
-DELETE FROM t.test;
-DELETE FROM t.test2;
-DELETE FROM t.test3;
+DELETE FROM t.public.test;
+DELETE FROM t.public.test2;
+DELETE FROM t.public.test3;
 `); err != nil {
 						t.Fatal(err)
 					}
@@ -691,9 +691,9 @@ DELETE FROM t.test3;
 					// getting duplicate key errors.
 					if _, err := sqlDB.Exec(`
 BEGIN;
-INSERT INTO t.test(k, v, t)  VALUES (1, 'boulanger', cluster_logical_timestamp()) RETURNING NOTHING;
-INSERT INTO t.test2(k, v, t) VALUES (2, 'dromedary', cluster_logical_timestamp()) RETURNING NOTHING;
-INSERT INTO t.test3(k, v, t) VALUES (3, 'josephine', cluster_logical_timestamp()) RETURNING NOTHING;
+INSERT INTO t.public.test(k, v, t)  VALUES (1, 'boulanger', cluster_logical_timestamp()) RETURNING NOTHING;
+INSERT INTO t.public.test2(k, v, t) VALUES (2, 'dromedary', cluster_logical_timestamp()) RETURNING NOTHING;
+INSERT INTO t.public.test3(k, v, t) VALUES (3, 'josephine', cluster_logical_timestamp()) RETURNING NOTHING;
 END;
 `); err != nil {
 						t.Fatal(err)
@@ -706,7 +706,7 @@ END;
 					// Each should have written exactly one row.
 					for _, table := range []string{"test", "test2", "test3"} {
 						var count int
-						if err := sqlDB.QueryRow(fmt.Sprintf("SELECT count(*) FROM t.%s", table)).Scan(&count); err != nil {
+						if err := sqlDB.QueryRow(fmt.Sprintf("SELECT count(*) FROM t.public.%s", table)).Scan(&count); err != nil {
 							t.Fatal(err)
 						}
 						if count != 1 {
@@ -759,7 +759,7 @@ func TestAbortedTxnOnlyRetriedOnce(t *testing.T) {
 		}
 	}
 
-	const insertStmt = "INSERT INTO t.test(k, v) VALUES (1, 'boulanger')"
+	const insertStmt = "INSERT INTO t.public.test(k, v) VALUES (1, 'boulanger')"
 	if err := aborter.QueueStmtForAbortion(
 		insertStmt, 1 /* abortCount */, true, /* willBeRetriedIbid */
 	); err != nil {
@@ -768,7 +768,7 @@ func TestAbortedTxnOnlyRetriedOnce(t *testing.T) {
 
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
+CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -855,7 +855,7 @@ func runTestTxn(
 	retriesNeeded :=
 		(magicVals.restartCounts["boulanger"] + magicVals.abortCounts["boulanger"]) > 0
 	if retriesNeeded {
-		_, err := tx.Exec("INSERT INTO t.test(k, v) VALUES (1, 'boulanger')")
+		_, err := tx.Exec("INSERT INTO t.public.test(k, v) VALUES (1, 'boulanger')")
 		if !testutils.IsError(err, expectedErr) {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -863,7 +863,7 @@ func runTestTxn(
 	}
 	// Now the INSERT should succeed.
 	if _, err := tx.Exec(
-		"DELETE FROM t.test WHERE true;" + sentinelInsert,
+		"DELETE FROM t.public.test WHERE true;" + sentinelInsert,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -894,7 +894,7 @@ func TestTxnUserRestart(t *testing.T) {
 
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
+CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -930,7 +930,7 @@ CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
 					}, false)
 
 				// Also inject an error at RELEASE time, besides the error injected by magicVals.
-				sentinelInsert := "INSERT INTO t.test(k, v) VALUES (0, 'sentinel')"
+				sentinelInsert := "INSERT INTO t.public.test(k, v) VALUES (0, 'sentinel')"
 				if parallel {
 					sentinelInsert += " RETURNING NOTHING"
 				}
@@ -948,7 +948,7 @@ CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
 				checkRestarts(t, tc.magicVals)
 
 				// Check that we only wrote the sentinel row.
-				rows, err := sqlDB.Query("SELECT * FROM t.test")
+				rows, err := sqlDB.Query("SELECT * FROM t.public.test")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -971,7 +971,7 @@ CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
 					t.Error(err)
 				}
 				// Clean up the table for the next test iteration.
-				_, err = sqlDB.Exec("DELETE FROM t.test WHERE true")
+				_, err = sqlDB.Exec("DELETE FROM t.public.test WHERE true")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -989,7 +989,7 @@ func TestCommitWaitState(t *testing.T) {
 	s, sqlDB, _ := serverutils.StartServer(t, params)
 	defer s.Stopper().Stop(context.TODO())
 	if _, err := sqlDB.Exec(`
-CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
+CREATE DATABASE t; CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1002,7 +1002,7 @@ CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
 		"SAVEPOINT cockroach_restart; RELEASE cockroach_restart"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec("INSERT INTO t.test(k, v) VALUES (0, 'sentinel')"); !testutils.IsError(err, "current transaction is committed") {
+	if _, err := tx.Exec("INSERT INTO t.public.test(k, v) VALUES (0, 'sentinel')"); !testutils.IsError(err, "current transaction is committed") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	// Rollback should respond with a COMMIT command tag.
@@ -1033,7 +1033,7 @@ func TestErrorOnCommitFinalizesTxn(t *testing.T) {
 	}
 
 	if _, err := sqlDB.Exec(`
-CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
+CREATE DATABASE t; CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1055,7 +1055,7 @@ CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("retryIntent=%t", tc.retryIntent), func(t *testing.T) {
-			const insertStmt = "INSERT INTO t.test(k, v) VALUES (0, 'boulanger')"
+			const insertStmt = "INSERT INTO t.public.test(k, v) VALUES (0, 'boulanger')"
 			if err := aborter.QueueStmtForAbortion(
 				insertStmt, 1 /* abortCount */, false, /* willBeRetriedIbid */
 			); err != nil {
@@ -1081,7 +1081,7 @@ CREATE DATABASE t; CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
 				t.Fatal(err)
 			}
 			// Check that we don't see any rows, so the previous txn was rolled back.
-			rows, err := sqlDB.Query("SELECT * FROM t.test")
+			rows, err := sqlDB.Query("SELECT * FROM t.public.test")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1120,13 +1120,13 @@ func TestRollbackInRestartWait(t *testing.T) {
 
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k INT PRIMARY KEY, v TEXT);
+CREATE TABLE t.public.test (k INT PRIMARY KEY, v TEXT);
 `); err != nil {
 		t.Fatal(err)
 	}
 
 	// Set up error injection that causes retries.
-	const insertStmt = "INSERT INTO t.test(k, v) VALUES (0, 'boulanger')"
+	const insertStmt = "INSERT INTO t.public.test(k, v) VALUES (0, 'boulanger')"
 	if err := aborter.QueueStmtForAbortion(
 		insertStmt, 1 /* abortCount */, false, /* willBeRetriedIbid */
 	); err != nil {
@@ -1240,9 +1240,9 @@ func TestNonRetryableError(t *testing.T) {
 	sqlDB.SetMaxOpenConns(1)
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k TEXT PRIMARY KEY, v TEXT);
-INSERT INTO t.test (k, v) VALUES ('test_key', 'test_val');
-SELECT * from t.test WHERE k = 'test_key';
+CREATE TABLE t.public.test (k TEXT PRIMARY KEY, v TEXT);
+INSERT INTO t.public.test (k, v) VALUES ('test_key', 'test_val');
+SELECT * from t.public.test WHERE k = 'test_key';
 `); !testutils.IsError(err, "pq: testError") {
 		t.Errorf("unexpected error %v", err)
 	}
@@ -1321,8 +1321,8 @@ func TestReacquireLeaseOnRestart(t *testing.T) {
 	sqlDB.SetMaxOpenConns(1)
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k TEXT PRIMARY KEY, v TEXT);
-INSERT INTO t.test (k, v) VALUES ('test_key', 'test_val');
+CREATE TABLE t.public.test (k TEXT PRIMARY KEY, v TEXT);
+INSERT INTO t.public.test (k, v) VALUES ('test_key', 'test_val');
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1330,7 +1330,7 @@ INSERT INTO t.test (k, v) VALUES ('test_key', 'test_val');
 	// and advance the transaction timestamp. The transaction timestamp will exceed the lease expiration
 	// time, and the second read attempt will re-acquire the lease.
 	if _, err := sqlDB.Exec(`
-SELECT * from t.test WHERE k = 'test_key';
+SELECT * from t.public.test WHERE k = 'test_key';
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1389,8 +1389,8 @@ func TestFlushUncommitedDescriptorCacheOnRestart(t *testing.T) {
 	sqlDB.SetMaxOpenConns(1)
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k TEXT PRIMARY KEY, v TEXT);
-INSERT INTO t.test (k, v) VALUES ('test_key', 'test_val');
+CREATE TABLE t.public.test (k TEXT PRIMARY KEY, v TEXT);
+INSERT INTO t.public.test (k, v) VALUES ('test_key', 'test_val');
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1399,8 +1399,8 @@ INSERT INTO t.test (k, v) VALUES ('test_key', 'test_val');
 	// not see the uncommitted renamed table.
 	if _, err := sqlDB.Exec(`
 BEGIN;
-SELECT * from t.test WHERE k = 'foobar';
-ALTER TABLE t.test RENAME TO t.foo;
+SELECT * from t.public.test WHERE k = 'foobar';
+ALTER TABLE t.public.test RENAME TO t.foo;
 SELECT * from t.foo WHERE k = 'test_key';
 COMMIT;
 `); err != nil {
@@ -1423,8 +1423,8 @@ func TestRetryableErrorForWrongTxn(t *testing.T) {
 	defer s.Stopper().Stop(context.TODO())
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k TEXT PRIMARY KEY, v TEXT);
-INSERT INTO t.test (k, v) VALUES ('test_key', 'test_val');
+CREATE TABLE t.public.test (k TEXT PRIMARY KEY, v TEXT);
+INSERT INTO t.public.test (k, v) VALUES ('test_key', 'test_val');
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1660,7 +1660,7 @@ func TestPushedTxnDetection(t *testing.T) {
 			if strings.Contains(stmt, marker) {
 				// Outside of the transaction, do a read. This will conflict with the
 				// next writer.
-				if _, err := sqlDB.Exec(`SELECT COUNT(1) FROM t.test`); err != nil {
+				if _, err := sqlDB.Exec(`SELECT COUNT(1) FROM t.public.test`); err != nil {
 					t.Error(err)
 				}
 				// Only do the filter once, to allow retries to succeed.
@@ -1674,7 +1674,7 @@ func TestPushedTxnDetection(t *testing.T) {
 
 	if _, err := sqlDB.Exec(`
 CREATE DATABASE t;
-CREATE TABLE t.test (k INT PRIMARY KEY);
+CREATE TABLE t.public.test (k INT PRIMARY KEY);
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -1712,7 +1712,7 @@ CREATE TABLE t.test (k INT PRIMARY KEY);
 				//     will cause the txn's timestamp to be pushed.
 				_, err = tx.Exec(
 					fmt.Sprintf(
-						`SHOW DATABASES; SELECT '%s'; INSERT INTO t.test VALUES (%d)`,
+						`SHOW DATABASES; SELECT '%s'; INSERT INTO t.public.test VALUES (%d)`,
 						marker, i))
 				if moveOutOfAutoRetry {
 					if !isRetryableErr(err) {

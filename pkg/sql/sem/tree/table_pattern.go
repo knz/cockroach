@@ -55,8 +55,7 @@ var _ DatabaseQualifiable = &TableName{}
 // NormalizeTablePattern resolves an UnresolvedName to either a
 // TableName or AllTablesSelector.
 func (n *UnresolvedName) NormalizeTablePattern() (TablePattern, error) {
-	if n.NumParts > 2 {
-		// db/cat.schema.table: We don't support those just yet.
+	if n.NumParts > 3 {
 		return nil, pgerror.NewErrorf(pgerror.CodeInvalidNameError,
 			"invalid table name: %q", ErrString(n))
 	}
@@ -72,15 +71,21 @@ func (n *UnresolvedName) NormalizeTablePattern() (TablePattern, error) {
 	}
 
 	if n.Star {
-		return &AllTablesSelector{
-			Schema:         Name(n.Parts[1]),
-			ExplicitSchema: n.NumParts >= 2,
-		}, nil
+		return &AllTablesSelector{tableNamePrefix{
+			SchemaName:      Name(n.Parts[1]),
+			CatalogName:     Name(n.Parts[2]),
+			ExplicitSchema:  n.NumParts >= 2,
+			ExplicitCatalog: n.NumParts >= 3,
+		}}, nil
 	}
 	return &TableName{
-		SchemaName:     Name(n.Parts[1]),
-		TableName:      Name(n.Parts[0]),
-		ExplicitSchema: n.NumParts >= 2,
+		TableName: Name(n.Parts[0]),
+		tableNamePrefix: tableNamePrefix{
+			CatalogName:     Name(n.Parts[2]),
+			SchemaName:      Name(n.Parts[1]),
+			ExplicitSchema:  n.NumParts >= 2,
+			ExplicitCatalog: n.NumParts >= 3,
+		},
 	}, nil
 }
 
@@ -90,14 +95,17 @@ func (t *TableName) NormalizeTablePattern() (TablePattern, error) { return t, ni
 // AllTablesSelector corresponds to a selection of all
 // tables in a database, e.g. when used with GRANT.
 type AllTablesSelector struct {
-	Schema         Name
-	ExplicitSchema bool
+	tableNamePrefix
 }
 
 // Format implements the NodeFormatter interface.
 func (at *AllTablesSelector) Format(ctx *FmtCtx) {
 	if at.ExplicitSchema {
-		ctx.FormatNode(&at.Schema)
+		if at.ExplicitCatalog {
+			ctx.FormatNode(&at.CatalogName)
+			ctx.WriteByte('.')
+		}
+		ctx.FormatNode(&at.SchemaName)
 		ctx.WriteByte('.')
 	}
 	ctx.WriteByte('*')
@@ -110,15 +118,7 @@ func (at *AllTablesSelector) NormalizeTablePattern() (TablePattern, error) { ret
 // QualifyWithDatabase adds an indirection for the database, if it's missing.
 // It transforms:  * -> database.*
 func (at *AllTablesSelector) QualifyWithDatabase(database string) error {
-	if at.ExplicitSchema {
-		// Database already qualified, nothing to do.
-		return nil
-	}
-	if database == "" {
-		return pgerror.NewErrorf(pgerror.CodeInvalidDatabaseDefinitionError, "no database specified: %q", at)
-	}
-	at.Schema = Name(database)
-	return nil
+	return at.tableNamePrefix.qualifyWithDatabase(database, at)
 }
 
 // TablePatterns implement a comma-separated list of table patterns.

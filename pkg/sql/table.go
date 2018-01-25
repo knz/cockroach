@@ -18,13 +18,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"runtime/debug"
 
+	"github.com/kr/pretty"
 	"github.com/pkg/errors"
 
 	"github.com/cockroachdb/cockroach/pkg/config"
 	"github.com/cockroachdb/cockroach/pkg/internal/client"
 	"github.com/cockroachdb/cockroach/pkg/roachpb"
 	"github.com/cockroachdb/cockroach/pkg/sql/jobs"
+	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
 	"github.com/cockroachdb/cockroach/pkg/sql/privilege"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/sql/sqlbase"
@@ -116,6 +119,13 @@ func (p *planner) getVirtualTabler() VirtualTabler {
 	return p.extendedEvalCtx.VirtualSchemas
 }
 
+func newInvalidSchemaError(tn *tree.TableName) error {
+	log.VEventf(context.TODO(), 2, "XXX invalid schema: %# v // %q", pretty.Formatter(tn), tn)
+	debug.PrintStack()
+	return pgerror.NewErrorf(pgerror.CodeInvalidSchemaNameError,
+		"unsupported schema specification: %q", tn)
+}
+
 // getTableOrViewDesc returns a table descriptor for either a table or view,
 // or nil if the descriptor is not found.
 func getTableOrViewDesc(
@@ -129,7 +139,11 @@ func getTableOrViewDesc(
 		return virtual, err
 	}
 
-	dbDesc, err := MustGetDatabaseDesc(ctx, txn, vt, tn.Schema())
+	if tn.SchemaName != tree.PublicSchemaName {
+		return nil, newInvalidSchemaError(tn)
+	}
+
+	dbDesc, err := MustGetDatabaseDesc(ctx, txn, vt, tn.Catalog())
 	if err != nil {
 		return nil, err
 	}
@@ -326,9 +340,9 @@ func (tc *TableCollection) getTableVersion(
 		log.Infof(ctx, "planner acquiring lease on table '%s'", tn)
 	}
 
-	isSystemDB := tn.Schema() == sqlbase.SystemDB.Name
-	isVirtualDB := vt.getVirtualDatabaseDesc(tn.Schema()) != nil
-	if isSystemDB || isVirtualDB || testDisableTableLeases {
+	isSystemDB := tn.Catalog() == sqlbase.SystemDB.Name
+	isVirtualSchema := vt.getVirtualDatabaseDesc(tn.Schema()) != nil
+	if isSystemDB || isVirtualSchema || testDisableTableLeases {
 		// We don't go through the normal lease mechanism for:
 		// - system tables. The system.lease and system.descriptor table, in
 		//   particular, are problematic because they are used for acquiring
@@ -344,6 +358,10 @@ func (tc *TableCollection) getTableVersion(
 		return tbl, nil
 	}
 
+	if tn.SchemaName != tree.PublicSchemaName {
+		return nil, newInvalidSchemaError(tn)
+	}
+
 	dbID, err := tc.getUncommittedDatabaseID(tn)
 	if err != nil {
 		return nil, err
@@ -352,7 +370,7 @@ func (tc *TableCollection) getTableVersion(
 	if dbID == 0 {
 		// Resolve the database from the database cache when the transaction
 		// hasn't modified the database.
-		dbID, err = tc.databaseCache.getDatabaseID(ctx, tc.leaseMgr.execCfg.DB.Txn, vt, tn.Schema())
+		dbID, err = tc.databaseCache.getDatabaseID(ctx, tc.leaseMgr.execCfg.DB.Txn, vt, tn.Catalog())
 		if err != nil {
 			return nil, err
 		}
@@ -500,7 +518,7 @@ func (tc *TableCollection) getUncommittedDatabaseID(tn *tree.TableName) (sqlbase
 	// Walk latest to earliest.
 	for i := len(tc.uncommittedDatabases) - 1; i >= 0; i-- {
 		db := tc.uncommittedDatabases[i]
-		if tn.Schema() == db.name {
+		if tn.Catalog() == db.name {
 			if db.dropped {
 				return 0, sqlbase.NewUndefinedRelationError(tn)
 			}
@@ -566,6 +584,7 @@ func getTableNames(
 			return nil, err
 		}
 		tn := tree.MakeTableName(tree.Name(dbDesc.Name), tree.Name(tableName))
+		tn.ExplicitCatalog = explicitSchema
 		tn.ExplicitSchema = explicitSchema
 		tableNames = append(tableNames, tn)
 	}
@@ -697,7 +716,7 @@ func expandTableGlob(
 		return nil, err
 	}
 
-	dbDesc, err := MustGetDatabaseDesc(ctx, txn, vt, string(glob.Schema))
+	dbDesc, err := MustGetDatabaseDesc(ctx, txn, vt, string(glob.CatalogName))
 	if err != nil {
 		return nil, err
 	}
@@ -723,8 +742,12 @@ func (p *planner) searchAndQualifyDatabase(ctx context.Context, tn *tree.TableNa
 		descFunc = getTableOrViewDesc
 	}
 
+	if t.SchemaName == "" {
+		t.SchemaName = tree.PublicSchemaName
+	}
+
 	if p.SessionData().Database != "" {
-		t.SchemaName = tree.Name(p.SessionData().Database)
+		t.CatalogName = tree.Name(p.SessionData().Database)
 		desc, err := descFunc(ctx, p.txn, p.getVirtualTabler(), &t)
 		if err != nil && !sqlbase.IsUndefinedRelationError(err) && !sqlbase.IsUndefinedDatabaseError(err) {
 			return err
@@ -740,7 +763,7 @@ func (p *planner) searchAndQualifyDatabase(ctx context.Context, tn *tree.TableNa
 	// the search path instead.
 	iter := p.SessionData().SearchPath.Iter()
 	for database, ok := iter(); ok; database, ok = iter() {
-		t.SchemaName = tree.Name(database)
+		t.CatalogName = tree.Name(database)
 		desc, err := descFunc(ctx, p.txn, p.getVirtualTabler(), &t)
 		if err != nil && !sqlbase.IsUndefinedRelationError(err) && !sqlbase.IsUndefinedDatabaseError(err) {
 			return err
@@ -828,6 +851,9 @@ func (p *planner) expandIndexName(
 	if err != nil {
 		return nil, err
 	}
+	if tn.SchemaName != tree.PublicSchemaName {
+		return nil, newInvalidSchemaError(tn)
+	}
 
 	if index.SearchTable {
 		// On the first call to expandIndexName(), index.Index is empty and
@@ -842,7 +868,7 @@ func (p *planner) expandIndexName(
 		realTableName, err := p.findTableContainingIndex(
 			ctx,
 			p.txn, p.getVirtualTabler(),
-			tn.SchemaName,
+			tn.CatalogName,
 			index.Index,
 			requireTable,
 		)
@@ -921,9 +947,9 @@ func resolveTableNameFromID(
 	table := tables[tableID]
 	tn := tree.NewTableName("", tree.Name(table.Name))
 	if parentDB, ok := databases[table.ParentID]; ok {
-		tn.SchemaName = tree.Name(parentDB.Name)
+		tn.CatalogName = tree.Name(parentDB.Name)
 	} else {
-		tn.SchemaName = tree.Name(fmt.Sprintf("[%d]", table.ParentID))
+		tn.CatalogName = tree.Name(fmt.Sprintf("[%d]", table.ParentID))
 		log.Errorf(ctx, "relation [%d] (%q) has no parent database (corrupted schema?)",
 			tableID, tree.ErrString(tn))
 	}

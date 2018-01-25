@@ -53,7 +53,11 @@ func (p *planner) CreateTable(ctx context.Context, n *tree.CreateTable) (planNod
 		return nil, err
 	}
 
-	dbDesc, err := MustGetDatabaseDesc(ctx, p.txn, p.getVirtualTabler(), tn.Schema())
+	if tn.SchemaName != tree.PublicSchemaName {
+		return nil, newInvalidSchemaError(tn)
+	}
+
+	dbDesc, err := MustGetDatabaseDesc(ctx, p.txn, p.getVirtualTabler(), tn.Catalog())
 	if err != nil {
 		return nil, err
 	}

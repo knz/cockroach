@@ -28,6 +28,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/types"
 	"github.com/cockroachdb/cockroach/pkg/sql/sqlbase"
 	"github.com/cockroachdb/cockroach/pkg/util"
+	"github.com/cockroachdb/cockroach/pkg/util/log"
 )
 
 // To understand dataSourceInfo below it is crucial to understand the
@@ -202,7 +203,9 @@ type sourceAliases []sourceAlias
 // source (and whether we found one).
 func (s sourceAliases) srcIdx(name tree.TableName) (srcIdx int, found bool) {
 	for i := range s {
-		if s[i].name.SchemaName == name.SchemaName && s[i].name.TableName == name.TableName {
+		if s[i].name.CatalogName == name.CatalogName &&
+			s[i].name.SchemaName == name.SchemaName &&
+			s[i].name.TableName == name.TableName {
 			return i, true
 		}
 	}
@@ -308,7 +311,7 @@ func (p *planner) getVirtualDataSource(
 		}
 
 		// Define the name of the source visible in EXPLAIN(NOEXPAND).
-		sourceName := tree.MakeTableNameWithCatalog(
+		sourceName := tree.MakeTableNameWithSchema(
 			tree.Name(catalog), tn.SchemaName, tree.Name(virtual.desc.Name))
 
 		// The resulting node.
@@ -378,10 +381,12 @@ func (p *planner) getDataSource(
 			return ds, nil
 		}
 		// Usual case: a table.
+		log.VEventf(ctx, 2, "before table src: %q", t)
 		tn, err := p.QualifyWithDatabase(ctx, t)
 		if err != nil {
 			return planDataSource{}, err
 		}
+		log.VEventf(ctx, 2, "after table src: %q", tn)
 
 		// Check if this is a virtual table.
 		ds, foundVirtual, err := p.getVirtualDataSource(ctx, tn)
@@ -466,7 +471,8 @@ func (p *planner) QualifyWithDatabase(
 	if err != nil {
 		return nil, err
 	}
-	if tn.SchemaName == "" {
+	if tn.CatalogName == "" {
+		// FIXME XXX
 		if err := p.searchAndQualifyDatabase(ctx, tn); err != nil {
 			return nil, err
 		}
@@ -547,13 +553,7 @@ func renameSource(
 		// The column aliases can only refer to explicit columns.
 		for colIdx, aliasIdx := 0, 0; aliasIdx < len(colAlias); colIdx++ {
 			if colIdx >= len(src.info.sourceColumns) {
-				var srcName string
-				if tableAlias.SchemaName != "" {
-					srcName = tree.ErrString(&tableAlias)
-				} else {
-					srcName = tree.ErrString(&tableAlias.TableName)
-				}
-
+				srcName := tree.ErrString(&tableAlias)
 				return planDataSource{}, errors.Errorf(
 					"source %q has %d columns available but %d columns specified",
 					srcName, aliasIdx, len(colAlias))
@@ -574,12 +574,6 @@ func renameSource(
 func (p *planner) getTableScanOrSequenceOrViewPlan(
 	ctx context.Context, tn *tree.TableName, hints *tree.IndexHints, scanVisibility scanVisibility,
 ) (planDataSource, error) {
-	if tn.ExplicitCatalog {
-		// Prefixes are currently only supported for virtual tables.
-		return planDataSource{}, tree.NewInvalidNameErrorf(
-			"invalid table name: %q", tree.ErrString(tn))
-	}
-
 	desc, err := p.getTableDesc(ctx, tn)
 	if err != nil {
 		return planDataSource{}, err
@@ -810,7 +804,8 @@ func newAmbiguousSourceError(t *tree.Name, dbContext *tree.Name) error {
 // checkDatabaseName checks whether the given TableName is unambiguous
 // for the set of sources and if it is, qualifies the missing database name.
 func (sources multiSourceInfo) checkDatabaseName(tn tree.TableName) (tree.TableName, error) {
-	if tn.SchemaName == "" {
+	// FIXME XXX
+	if tn.CatalogName == "" {
 		// No database name yet. Try to find one.
 		found := false
 		for _, src := range sources {
@@ -819,7 +814,7 @@ func (sources multiSourceInfo) checkDatabaseName(tn tree.TableName) (tree.TableN
 					if found {
 						return tree.TableName{}, newAmbiguousSourceError(&tn.TableName, &tree.NoName)
 					}
-					tn.SchemaName = alias.name.SchemaName
+					tn.CatalogName = alias.name.CatalogName
 					found = true
 				}
 			}
@@ -835,7 +830,7 @@ func (sources multiSourceInfo) checkDatabaseName(tn tree.TableName) (tree.TableN
 	for _, src := range sources {
 		if _, ok := src.sourceAliases.srcIdx(tn); ok {
 			if found {
-				return tree.TableName{}, newAmbiguousSourceError(&tn.TableName, &tn.SchemaName)
+				return tree.TableName{}, newAmbiguousSourceError(&tn.TableName, &tn.CatalogName)
 			}
 			found = true
 		}
@@ -849,7 +844,8 @@ func (sources multiSourceInfo) checkDatabaseName(tn tree.TableName) (tree.TableN
 // checkDatabaseName checks whether the given TableName is unambiguous
 // within this source and if it is, qualifies the missing database name.
 func (src *dataSourceInfo) checkDatabaseName(tn tree.TableName) (tree.TableName, error) {
-	if tn.SchemaName == "" {
+	// FIXME XXX
+	if tn.CatalogName == "" {
 		// No database name yet. Try to find one.
 		found := false
 		for _, alias := range src.sourceAliases {
@@ -858,7 +854,7 @@ func (src *dataSourceInfo) checkDatabaseName(tn tree.TableName) (tree.TableName,
 					return tree.TableName{}, newAmbiguousSourceError(&tn.TableName, &tree.NoName)
 				}
 				found = true
-				tn.SchemaName = alias.name.SchemaName
+				tn.CatalogName = alias.name.CatalogName
 			}
 		}
 		if !found {
@@ -940,6 +936,7 @@ func (sources multiSourceInfo) findColumn(c *tree.ColumnItem) (srcIdx int, colId
 
 		// Propagate the discovered database name back to the original VarName.
 		// (to clarify the output of e.g. EXPLAIN)
+		c.TableName.CatalogName = tableName.CatalogName
 		c.TableName.SchemaName = tableName.SchemaName
 	}
 
@@ -999,12 +996,16 @@ type varFormatter struct {
 
 // Format implements the NodeFormatter interface.
 func (c *varFormatter) Format(ctx *tree.FmtCtx) {
+	// TODO(knz/jordan): This looks like it could share code with tree.ColumnItem.
 	if ctx.HasFlags(tree.FmtShowTableAliases) && c.TableName.TableName != "" {
-		if c.TableName.SchemaName != "" {
+		if c.TableName.CatalogName != "" {
+			ctx.FormatNode(&c.TableName.CatalogName)
+			ctx.WriteByte('.')
+		}
+		if c.TableName.CatalogName != "" || c.TableName.SchemaName != "" {
 			ctx.FormatNode(&c.TableName.SchemaName)
 			ctx.WriteByte('.')
 		}
-
 		ctx.FormatNode(&c.TableName.TableName)
 		ctx.WriteByte('.')
 	}

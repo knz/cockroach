@@ -363,7 +363,7 @@ func (j *Job) initialize(payload *Payload) (err error) {
 func (j *Job) load(ctx context.Context) error {
 	var payload *Payload
 	if err := j.runInTxn(ctx, func(ctx context.Context, txn *client.Txn) error {
-		const stmt = "SELECT payload FROM system.jobs WHERE id = $1"
+		const stmt = "SELECT payload FROM system.public.jobs WHERE id = $1"
 		row, err := j.registry.ex.QueryRowInTransaction(ctx, "log-job", txn, stmt, *j.id)
 		if err != nil {
 			return err
@@ -392,7 +392,7 @@ func (j *Job) insert(ctx context.Context, id int64, payload *Payload) error {
 			return err
 		}
 
-		const stmt = "INSERT INTO system.jobs (id, status, payload) VALUES ($1, $2, $3)"
+		const stmt = "INSERT INTO system.public.jobs (id, status, payload) VALUES ($1, $2, $3)"
 		_, err = j.registry.ex.ExecuteStatementInTransaction(ctx, "job-insert", txn, stmt, id, StatusPending, payloadBytes)
 		return err
 	}); err != nil {
@@ -412,7 +412,7 @@ func (j *Job) update(
 
 	var payload *Payload
 	if err := j.runInTxn(ctx, func(ctx context.Context, txn *client.Txn) error {
-		const selectStmt = "SELECT status, payload FROM system.jobs WHERE id = $1"
+		const selectStmt = "SELECT status, payload FROM system.public.jobs WHERE id = $1"
 		row, err := j.registry.ex.QueryRowInTransaction(ctx, "log-job", txn, selectStmt, *j.id)
 		if err != nil {
 			return err
@@ -441,7 +441,7 @@ func (j *Job) update(
 			return err
 		}
 
-		const updateStmt = "UPDATE system.jobs SET status = $1, payload = $2 WHERE id = $3"
+		const updateStmt = "UPDATE system.public.jobs SET status = $1, payload = $2 WHERE id = $3"
 		updateArgs := []interface{}{status, payloadBytes, *j.id}
 		n, err := j.registry.ex.ExecuteStatementInTransaction(
 			ctx, "job-update", txn, updateStmt, updateArgs...)
@@ -604,7 +604,7 @@ func RunAndWaitForTerminalState(
 			execErrCh = nil
 		case <-r.NextCh(): // Fallthrough.
 		}
-		err := sqlDB.QueryRow(`SELECT id FROM system.jobs WHERE created > $1`, begin).Scan(&jobID)
+		err := sqlDB.QueryRow(`SELECT id FROM system.public.jobs WHERE created > $1`, begin).Scan(&jobID)
 		if err == nil {
 			break
 		}

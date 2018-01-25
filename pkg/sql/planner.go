@@ -192,7 +192,10 @@ func newInternalPlanner(
 	// looks in the session for the current database.
 	ctx := log.WithLogTagStr(context.Background(), opName, "")
 
+	curDb := "" // FIXME XXX: change this to system later
+
 	data := sessiondata.SessionData{
+		Database: curDb,
 		Location: time.UTC,
 		User:     user,
 	}
@@ -210,7 +213,7 @@ func newInternalPlanner(
 		s:    s,
 		defaults: sessionDefaults{
 			applicationName: "crdb-internal",
-			database:        "",
+			database:        "system",
 		},
 		settings:       nil,
 		curTxnReadOnly: &s.TxnState.readOnly,
@@ -351,6 +354,7 @@ func (p *planner) QueryRow(
 func (p *planner) queryRows(
 	ctx context.Context, sql string, args ...interface{},
 ) ([]tree.Datums, sqlbase.ResultColumns, error) {
+	log.VEventf(ctx, 2, "internal query: %s", sql)
 	// makeInternalPlan() clobbers p.curplan and the placeholder info
 	// map, so we have to save/restore them here.
 	defer func(psave planTop, pisave tree.PlaceholderInfo) {
@@ -388,6 +392,7 @@ func (p *planner) queryRows(
 // exec executes a SQL query string and returns the number of rows
 // affected.
 func (p *planner) exec(ctx context.Context, sql string, args ...interface{}) (int, error) {
+	log.VEventf(ctx, 2, "internal exec: %s", sql)
 	// makeInternalPlan() clobbers p.curplan and the placeholder info
 	// map, so we have to save/restore them here.
 	defer func(psave planTop, pisave tree.PlaceholderInfo) {

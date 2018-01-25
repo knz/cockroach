@@ -295,35 +295,35 @@ func TestShowCreateView(t *testing.T) {
 	}{
 		{
 			`CREATE VIEW %s AS SELECT i, s, v, t FROM t`,
-			`CREATE VIEW %s (i, s, v, t) AS SELECT i, s, v, t FROM d.t`,
+			`CREATE VIEW %s (i, s, v, t) AS SELECT i, s, v, t FROM d.public.t`,
 		},
 		{
 			`CREATE VIEW %s AS SELECT i, s, t FROM t`,
-			`CREATE VIEW %s (i, s, t) AS SELECT i, s, t FROM d.t`,
+			`CREATE VIEW %s (i, s, t) AS SELECT i, s, t FROM d.public.t`,
 		},
 		{
 			`CREATE VIEW %s AS SELECT t.i, t.s, t.t FROM t`,
-			`CREATE VIEW %s (i, s, t) AS SELECT t.i, t.s, t.t FROM d.t`,
+			`CREATE VIEW %s (i, s, t) AS SELECT t.i, t.s, t.t FROM d.public.t`,
 		},
 		{
 			`CREATE VIEW %s AS SELECT foo.i, foo.s, foo.t FROM t AS foo WHERE foo.i > 3`,
-			`CREATE VIEW %s (i, s, t) AS SELECT foo.i, foo.s, foo.t FROM d.t AS foo WHERE foo.i > 3`,
+			`CREATE VIEW %s (i, s, t) AS SELECT foo.i, foo.s, foo.t FROM d.public.t AS foo WHERE foo.i > 3`,
 		},
 		{
 			`CREATE VIEW %s AS SELECT count(*) FROM t`,
-			`CREATE VIEW %s (count) AS SELECT count(*) FROM d.t`,
+			`CREATE VIEW %s (count) AS SELECT count(*) FROM d.public.t`,
 		},
 		{
 			`CREATE VIEW %s AS SELECT s, count(*) FROM t GROUP BY s HAVING count(*) > 3:::INT`,
-			`CREATE VIEW %s (s, count) AS SELECT s, count(*) FROM d.t GROUP BY s HAVING count(*) > 3:::INT`,
+			`CREATE VIEW %s (s, count) AS SELECT s, count(*) FROM d.public.t GROUP BY s HAVING count(*) > 3:::INT`,
 		},
 		{
 			`CREATE VIEW %s (a, b, c, d) AS SELECT i, s, v, t FROM t`,
-			`CREATE VIEW %s (a, b, c, d) AS SELECT i, s, v, t FROM d.t`,
+			`CREATE VIEW %s (a, b, c, d) AS SELECT i, s, v, t FROM d.public.t`,
 		},
 		{
 			`CREATE VIEW %s (a, b) AS SELECT i, v FROM t`,
-			`CREATE VIEW %s (a, b) AS SELECT i, v FROM d.t`,
+			`CREATE VIEW %s (a, b) AS SELECT i, v FROM d.public.t`,
 		},
 	}
 	for i, test := range tests {
@@ -605,7 +605,7 @@ func TestShowJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 	sqlDB.Exec(t,
-		`INSERT INTO system.jobs (id, status, created, payload) VALUES ($1, $2, $3, $4)`,
+		`INSERT INTO system.public.jobs (id, status, created, payload) VALUES ($1, $2, $3, $4)`,
 		in.id, in.status, in.created, inPayload,
 	)
 

@@ -73,6 +73,7 @@ func (s *scope) VisitPre(expr tree.Expr) (recurse bool, newExpr tree.Expr) {
 					if tblName == "" && col.table != "" {
 						t.TableName.TableName = tree.Name(col.table)
 						t.TableName.ExplicitSchema = false
+						t.TableName.ExplicitCatalog = false
 					}
 					return false, col
 				}

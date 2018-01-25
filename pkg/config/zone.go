@@ -148,8 +148,13 @@ func CLIZoneSpecifier(zs *tree.ZoneSpecifier) string {
 		tn := ti.Table.TableName()
 		ti.Table = tree.NormalizableTableName{
 			TableNameReference: &tree.UnresolvedName{
-				NumParts: 3,
-				Parts:    tree.NameParts{string(zs.Partition), string(tn.TableName), string(tn.SchemaName)},
+				NumParts: 4,
+				Parts: tree.NameParts{
+					string(zs.Partition),
+					tn.Table(),
+					string(tree.PublicSchemaName),
+					tn.Catalog(),
+				},
 			},
 		}
 		// The index is redundant when the partition is specified, so omit it.
@@ -183,7 +188,10 @@ func ResolveZoneSpecifier(
 	if err != nil {
 		return 0, err
 	}
-	databaseID, err := resolveName(keys.RootNamespaceID, tn.Schema())
+	if tn.SchemaName != tree.PublicSchemaName {
+		return 0, fmt.Errorf("only schema \"public\" is supported: %q", tree.ErrString(tn))
+	}
+	databaseID, err := resolveName(keys.RootNamespaceID, tn.Catalog())
 	if err != nil {
 		return 0, err
 	}

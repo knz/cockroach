@@ -21,6 +21,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -1048,16 +1049,24 @@ CREATE TABLE pg_catalog.pg_namespace (
 	nspacl STRING[]
 );
 `,
-	populate: func(ctx context.Context, p *planner, _ string, addRow func(...tree.Datum) error) error {
+	populate: func(ctx context.Context, p *planner, prefix string, addRow func(...tree.Datum) error) error {
 		h := makeOidHasher()
-		return forEachDatabaseDesc(ctx, p, func(db *sqlbase.DatabaseDescriptor) error {
-			return addRow(
-				h.NamespaceOid(db.Name),  // oid
-				tree.NewDString(db.Name), // nspname
-				tree.DNull,               // nspowner
-				tree.DNull,               // nspacl
-			)
-		})
+		schemaNames := []string{"public"}
+		for _, schema := range p.getVirtualTabler().getEntries() {
+			schemaNames = append(schemaNames, schema.desc.Name)
+		}
+		sort.Strings(schemaNames)
+		for _, s := range schemaNames {
+			if err := addRow(
+				h.NamespaceOid(s),  // oid
+				tree.NewDString(s), // nspname
+				tree.DNull,         // nspowner
+				tree.DNull,         // nspacl
+			); err != nil {
+				return err
+			}
+		}
+		return nil
 	},
 }
 

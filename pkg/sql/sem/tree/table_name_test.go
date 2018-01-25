@@ -25,6 +25,7 @@ import (
 
 func resetRepr(tn *tree.TableName) {
 	tn.ExplicitSchema = true
+	tn.ExplicitCatalog = true
 }
 
 func TestNormalizeTableName(t *testing.T) {
@@ -33,15 +34,16 @@ func TestNormalizeTableName(t *testing.T) {
 		db      string
 		err     string
 	}{
-		{`foo`, `test.foo`, `test`, ``},
-		{`test.foo`, `test.foo`, ``, ``},
-		{`bar.foo`, `bar.foo`, `test`, ``},
+		{`foo`, `test.public.foo`, `test`, ``},
+		{`test.foo`, `test.public.foo`, `test`, ``},
+		{`bar.foo`, `test.bar.foo`, `test`, ``},
 		{`p.foo.bar`, `p.foo.bar`, ``, ``},
 
 		{`""`, ``, ``, `empty table name`},
 		{`foo`, ``, ``, `no database specified`},
 		{`foo@bar`, ``, ``, `syntax error`},
 		{`test.*`, ``, ``, `syntax error at or near "*"`},
+		{`test.foo`, ``, ``, `no database specified`},
 		{`p."".bar`, ``, ``, `empty schema name: "p\.\.bar"`},
 	}
 

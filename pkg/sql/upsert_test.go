@@ -139,7 +139,7 @@ func TestConcurrentUpsertWithSnapshotIsolation(t *testing.T) {
 	sqlDB := sqlutils.MakeSQLRunner(conn)
 
 	sqlDB.Exec(t, `CREATE DATABASE d`)
-	sqlDB.Exec(t, `CREATE TABLE d.t (a INT PRIMARY KEY, b INT, INDEX b_idx (b))`)
+	sqlDB.Exec(t, `CREATE TABLE d.public.t (a INT PRIMARY KEY, b INT, INDEX b_idx (b))`)
 	sqlDB.Exec(t, `SET DEFAULT_TRANSACTION_ISOLATION TO SNAPSHOT`)
 
 	testCases := []struct {
@@ -149,12 +149,12 @@ func TestConcurrentUpsertWithSnapshotIsolation(t *testing.T) {
 		// Upsert case.
 		{
 			name:       "upsert",
-			updateStmt: `UPSERT INTO d.t VALUES (1, $1)`,
+			updateStmt: `UPSERT INTO d.public.t VALUES (1, $1)`,
 		},
 		// Update case.
 		{
 			name:       "update",
-			updateStmt: `UPDATE d.t SET b = $1 WHERE a = 1`,
+			updateStmt: `UPDATE d.public.t SET b = $1 WHERE a = 1`,
 		},
 	}
 
@@ -177,12 +177,12 @@ func TestConcurrentUpsertWithSnapshotIsolation(t *testing.T) {
 			// See #14099.
 			if err := g.Wait(); err != nil {
 				t.Errorf(`%+v
-SELECT * FROM d.t@primary = %s
-SELECT * FROM d.t@b_idx   = %s
+SELECT * FROM d.public.t@primary = %s
+SELECT * FROM d.public.t@b_idx   = %s
 `,
 					err,
-					sqlDB.QueryStr(t, `SELECT * FROM d.t@primary`),
-					sqlDB.QueryStr(t, `SELECT * FROM d.t@b_idx`),
+					sqlDB.QueryStr(t, `SELECT * FROM d.public.t@primary`),
+					sqlDB.QueryStr(t, `SELECT * FROM d.public.t@b_idx`),
 				)
 			}
 		})

@@ -9,6 +9,7 @@
 package sqlccl
 
 import (
+	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/sql/sqlbase"
 	"github.com/pkg/errors"
@@ -41,6 +42,11 @@ func (d descriptorsMatched) checkExpansions(coveredDBs []sqlbase.ID) error {
 		}
 	}
 	return nil
+}
+
+func newInvalidSchemaError(tn tree.NodeFormatter) error {
+	return pgerror.NewErrorf(pgerror.CodeInvalidSchemaNameError,
+		"unsupported schema specification: %q", tn)
 }
 
 // descriptorsMatchingTargets returns the descriptors that match the targets. A
@@ -92,7 +98,10 @@ func descriptorsMatchingTargets(
 					return ret, err
 				}
 			}
-			db := string(p.SchemaName)
+			if p.SchemaName != tree.PublicSchemaName {
+				return ret, newInvalidSchemaError(p)
+			}
+			db := string(p.CatalogName)
 			tablesByDatabase[db] = append(tablesByDatabase[db], table{
 				name:     string(p.TableName),
 				validity: maybeValid,
@@ -103,7 +112,10 @@ func descriptorsMatchingTargets(
 					return ret, err
 				}
 			}
-			starByDatabase[string(p.Schema)] = maybeValid
+			if p.SchemaName != tree.PublicSchemaName {
+				return ret, newInvalidSchemaError(p)
+			}
+			starByDatabase[string(p.CatalogName)] = maybeValid
 		default:
 			return ret, errors.Errorf("unknown pattern %T: %+v", pattern, pattern)
 		}

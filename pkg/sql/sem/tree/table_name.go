@@ -15,9 +15,13 @@
 package tree
 
 import (
+	"context"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
+	"github.com/cockroachdb/cockroach/pkg/util/log"
+	"github.com/kr/pretty"
 )
 
 // Table names are used in statements like CREATE TABLE,
@@ -99,10 +103,15 @@ type TableNameReference interface {
 // instances of this directly, and instead use the NewTableName /
 // MakeTableName functions underneath.
 type TableName struct {
+	TableName Name
+
+	tableNamePrefix
+}
+
+// tableNamePrefix corresponds to the path prefix of a table name.
+type tableNamePrefix struct {
 	CatalogName Name
 	SchemaName  Name
-
-	TableName Name
 
 	// ExplicitCatalog is true iff the catalog was explicitly specified
 	// or it needs to be rendered during pretty-printing.
@@ -112,29 +121,37 @@ type TableName struct {
 	ExplicitSchema bool
 }
 
-// MakeTableName creates a new table name qualified with just a schema.
+// MakeTableName creates a new table name qualified with a given catalog
+// and the public schema.
 func MakeTableName(db, tbl Name) TableName {
 	return TableName{
-		SchemaName:     db,
-		TableName:      tbl,
-		ExplicitSchema: true,
+		TableName: tbl,
+		tableNamePrefix: tableNamePrefix{
+			CatalogName:     db,
+			SchemaName:      PublicSchemaName,
+			ExplicitSchema:  true,
+			ExplicitCatalog: true,
+		},
 	}
 }
 
-// NewTableName creates a new qualified table name.
+// NewTableName creates a new table name qualified with a given
+// catalog and the public schema.
 func NewTableName(db, tbl Name) *TableName {
 	tn := MakeTableName(db, tbl)
 	return &tn
 }
 
-// MakeTableNameWithCatalog creates a new fully qualified table name.
-func MakeTableNameWithCatalog(db, schema, tbl Name) TableName {
+// MakeTableNameWithSchema creates a new fully qualified table name.
+func MakeTableNameWithSchema(db, schema, tbl Name) TableName {
 	return TableName{
-		CatalogName:     db,
-		SchemaName:      schema,
-		TableName:       tbl,
-		ExplicitSchema:  true,
-		ExplicitCatalog: true,
+		TableName: tbl,
+		tableNamePrefix: tableNamePrefix{
+			CatalogName:     db,
+			SchemaName:      schema,
+			ExplicitSchema:  true,
+			ExplicitCatalog: true,
+		},
 	}
 }
 
@@ -154,9 +171,9 @@ func NewUnqualifiedTableName(tbl Name) *TableName {
 // Format implements the NodeFormatter interface.
 func (t *TableName) Format(ctx *FmtCtx) {
 	f := ctx.flags
-	if t.ExplicitSchema ||
-		f.HasFlags(FmtAlwaysQualifyTableNames) || ctx.tableNameFormatter != nil {
-		if t.ExplicitCatalog {
+	alwaysFormat := f.HasFlags(FmtAlwaysQualifyTableNames) || ctx.tableNameFormatter != nil
+	if t.ExplicitSchema || alwaysFormat {
+		if t.ExplicitCatalog || alwaysFormat {
 			ctx.FormatNode(&t.CatalogName)
 			ctx.WriteByte('.')
 		}
@@ -178,6 +195,11 @@ func (t *TableName) Table() string {
 // Schema retrieves the unqualified schema name.
 func (t *TableName) Schema() string {
 	return string(t.SchemaName)
+}
+
+// Catalog retrieves the unqualified catalog name.
+func (t *TableName) Catalog() string {
+	return string(t.CatalogName)
 }
 
 // NewInvalidNameErrorf initializes an error carrying the pg code CodeInvalidNameError.
@@ -207,11 +229,13 @@ func (n *UnresolvedName) normalizeTableNameAsValue() (res TableName, err error) 
 	// `select * from "".crdb_internal.tables`.
 
 	res = TableName{
-		TableName:       Name(n.Parts[0]),
-		SchemaName:      Name(n.Parts[1]),
-		CatalogName:     Name(n.Parts[2]),
-		ExplicitSchema:  n.NumParts >= 2,
-		ExplicitCatalog: n.NumParts >= 3,
+		TableName: Name(n.Parts[0]),
+		tableNamePrefix: tableNamePrefix{
+			SchemaName:      Name(n.Parts[1]),
+			CatalogName:     Name(n.Parts[2]),
+			ExplicitSchema:  n.NumParts >= 2,
+			ExplicitCatalog: n.NumParts >= 3,
+		},
 	}
 
 	return res, nil
@@ -226,19 +250,61 @@ func (n *UnresolvedName) NormalizeTableName() (*TableName, error) {
 	return &tn, nil
 }
 
-// QualifyWithDatabase adds an indirection for the database, if it's missing.
+const PublicSchemaName Name = "public"
+
+// qualifyWithDatabase adds an indirection for the database, if it's missing.
 // It transforms:
-// table       -> database.table
-// table@index -> database.table@index
+// table           -> database.public.table
+// public.table    -> database.public.table
+// database.table  -> database.public.table (compat with prior CockroachDB versions)
+// other.table     -> database.other.table
+// otherdb.x.table -> otherdb.x.table (unchanged)
 func (t *TableName) QualifyWithDatabase(database string) error {
-	if t.ExplicitSchema {
-		// Schema already specified. No room to add a new one.
+	return t.tableNamePrefix.qualifyWithDatabase(database, t)
+}
+
+func (t *tableNamePrefix) qualifyWithDatabase(database string, parent NodeFormatter) error {
+	if log.V(2) {
+		if database == "" && log.V(3) {
+			debug.PrintStack()
+		}
+		log.Infof(context.TODO(), "Before qualify (%q): %# v // %q", database, pretty.Formatter(t), parent)
+		defer func() {
+			log.Infof(context.TODO(), "After qualify (%q): %# v // %q", database, pretty.Formatter(t), parent)
+		}()
+	}
+	if t.ExplicitCatalog {
+		// Catalog already specified. No room to add a new one.
+		// However we need to sanitize what's there.
+		if t.CatalogName == "" {
+			return pgerror.NewErrorf(pgerror.CodeInvalidNameError, "empty catalog name: %q", parent)
+		} else if t.CatalogName == t.SchemaName {
+			// Compatibility with previous CockroachDB versions:
+			// db.db.tbl == tb.public.tbl
+			t.SchemaName = PublicSchemaName
+		} else if t.SchemaName == "" {
+			return pgerror.NewErrorf(pgerror.CodeInvalidNameError, "empty schema name: %q", parent)
+		}
+		// Ensure the schema is visible if the catalog was.
+		t.ExplicitSchema = true
 		return nil
 	}
 	if database == "" {
-		return pgerror.NewErrorf(pgerror.CodeUndefinedTableError, "no database specified: %q", t)
+		return pgerror.NewErrorf(pgerror.CodeUndefinedTableError, "no database specified: %q", parent)
 	}
-	t.SchemaName = Name(database)
+	if t.ExplicitSchema {
+		if t.SchemaName == "" {
+			return pgerror.NewErrorf(pgerror.CodeInvalidNameError, "empty schema name: %q", parent)
+		} else if t.SchemaName == Name(database) {
+			// Compatibility with previous CockroachDB versions:
+			// db.tbl qualified with "db" is really "db.public.tbl"
+			t.SchemaName = PublicSchemaName
+			t.ExplicitCatalog = true
+		}
+	} else {
+		t.SchemaName = PublicSchemaName
+	}
+	t.CatalogName = Name(database)
 	return nil
 }
 

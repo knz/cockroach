@@ -135,7 +135,7 @@ statement ok
 GRANT testrole TO testuser
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role      member    isAdmin
 admin     root      true
@@ -152,7 +152,7 @@ statement ok
 GRANT testrole TO testuser WITH ADMIN OPTION
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role      member    isAdmin
 admin     root      true
@@ -170,7 +170,7 @@ GRANT admin TO testuser
 
 # Dropping users/roles deletes all their memberships.
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role      member     isAdmin
 admin     root       true
@@ -185,7 +185,7 @@ statement ok
 CREATE USER testuser
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role      member     isAdmin
 admin     root       true
@@ -195,7 +195,7 @@ statement ok
 DROP ROLE testrole
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role      member     isAdmin
 admin     root       true
@@ -267,7 +267,7 @@ GRANT rolea TO rolee
 user root
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role   member    isAdmin
 admin  root      true
@@ -284,7 +284,7 @@ statement ok
 DROP ROLE rolec
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role   member    isAdmin
 admin  root      true
@@ -329,7 +329,7 @@ statement ok
 GRANT rolea,roleb TO testuser WITH ADMIN OPTION
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role   member    isAdmin
 admin  root      true
@@ -344,7 +344,7 @@ GRANT rolea,roleb TO root WITH ADMIN OPTION
 user root
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role   member    isAdmin
 admin  root      true
@@ -367,7 +367,7 @@ REVOKE roleb FROM root
 user root
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role   member    isAdmin
 admin  root      true
@@ -379,7 +379,7 @@ statement ok
 REVOKE rolea, roleb FROM testuser, root
 
 query TTB colnames
-SELECT * FROM system.role_members
+SELECT * FROM system.public.role_members
 ----
 role   member    isAdmin
 admin  root      true

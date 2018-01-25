@@ -160,7 +160,7 @@ func TestTxnCanStillResolveOldName(t *testing.T) {
 
 	sql := `
 CREATE DATABASE test;
-CREATE TABLE test.t (a INT PRIMARY KEY);
+CREATE TABLE test.public.t (a INT PRIMARY KEY);
 `
 	_, err := db.Exec(sql)
 	if err != nil {
@@ -178,7 +178,7 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 	}
 
 	// Run a command to make the transaction resolves the table name.
-	if _, err := txn.Exec("SELECT * FROM test.t"); err != nil {
+	if _, err := txn.Exec("SELECT * FROM test.public.t"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -188,7 +188,7 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 		// The ALTER will commit and signal the main thread through `renamed`, but
 		// the schema changer will remain blocked by the lease on the "t" version
 		// held by the txn started above.
-		_, err := db.Exec("ALTER TABLE test.t RENAME TO test.t2")
+		_, err := db.Exec("ALTER TABLE test.public.t RENAME TO test.public.t2")
 		threadDone <- err
 	}()
 	defer func() {
@@ -205,7 +205,7 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 
 	// Run another command in the transaction and make sure that we can still
 	// resolve the table name.
-	if _, err := txn.Exec("SELECT * FROM test.t"); err != nil {
+	if _, err := txn.Exec("SELECT * FROM test.public.t"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -213,7 +213,7 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 	// the old one (the mechanism for ensuring this is that the entry for the old
 	// name is not deleted from the database until the async schema changer checks
 	// that there's no more leases on the old version).
-	if _, err := db.Exec("CREATE TABLE test.t (a INT PRIMARY KEY)"); !testutils.IsError(
+	if _, err := db.Exec("CREATE TABLE test.public.t (a INT PRIMARY KEY)"); !testutils.IsError(
 		err, `relation "t" already exists`) {
 		t.Fatal(err)
 	}
@@ -230,8 +230,8 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 	if lease != nil {
 		t.Fatalf(`still have lease on "t"`)
 	}
-	if _, err := db.Exec("SELECT * FROM test.t"); !testutils.IsError(
-		err, `relation "test.t" does not exist`) {
+	if _, err := db.Exec("SELECT * FROM test.public.t"); !testutils.IsError(
+		err, `relation "test.public.t" does not exist`) {
 		t.Fatal(err)
 	}
 }
@@ -246,7 +246,7 @@ func TestTxnCanUseNewNameAfterRename(t *testing.T) {
 
 	sql := `
 CREATE DATABASE test;
-CREATE TABLE test.t (a INT PRIMARY KEY);
+CREATE TABLE test.public.t (a INT PRIMARY KEY);
 `
 	_, err := db.Exec(sql)
 	if err != nil {
@@ -254,7 +254,7 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 	}
 
 	// Make sure we take a lease on the version called "t".
-	if _, err := db.Exec("SELECT * FROM test.t"); err != nil {
+	if _, err := db.Exec("SELECT * FROM test.public.t"); err != nil {
 		t.Fatal(err)
 	}
 	{
@@ -263,11 +263,11 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 			t.Fatal(err)
 		}
 
-		if _, err := txn.Exec("ALTER TABLE test.t RENAME TO test.t2"); err != nil {
+		if _, err := txn.Exec("ALTER TABLE test.public.t RENAME TO test.public.t2"); err != nil {
 			t.Fatal(err)
 		}
 		// Check that we can use the new name.
-		if _, err := txn.Exec("SELECT * FROM test.t2"); err != nil {
+		if _, err := txn.Exec("SELECT * FROM test.public.t2"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -282,17 +282,17 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 			t.Fatal(err)
 		}
 
-		if _, err := txn.Exec("ALTER TABLE test.t2 RENAME TO test.t"); err != nil {
+		if _, err := txn.Exec("ALTER TABLE test.public.t2 RENAME TO test.public.t"); err != nil {
 			t.Fatal(err)
 		}
 		// Check that we can use the new name.
-		if _, err := txn.Exec("SELECT * FROM test.t"); err != nil {
+		if _, err := txn.Exec("SELECT * FROM test.public.t"); err != nil {
 			t.Fatal(err)
 		}
 		// Check that we cannot use the old name.
 		if _, err := txn.Exec(`
-SELECT * FROM test.t2
-`); !testutils.IsError(err, "relation \"test.t2\" does not exist") {
+SELECT * FROM test.public.t2
+`); !testutils.IsError(err, "relation \"test.public.t2\" does not exist") {
 			t.Fatalf("err = %v", err)
 		}
 		if err := txn.Rollback(); err != nil {
@@ -310,7 +310,7 @@ func TestSeriesOfRenames(t *testing.T) {
 
 	sql := `
 CREATE DATABASE test;
-CREATE TABLE test.t (a INT PRIMARY KEY);
+CREATE TABLE test.public.t (a INT PRIMARY KEY);
 `
 	_, err := db.Exec(sql)
 	if err != nil {
@@ -321,13 +321,13 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := txn.Exec("ALTER TABLE test.t RENAME TO test.t2"); err != nil {
+	if _, err := txn.Exec("ALTER TABLE test.public.t RENAME TO test.public.t2"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := txn.Exec("ALTER TABLE test.t2 RENAME TO test.t3"); err != nil {
+	if _, err := txn.Exec("ALTER TABLE test.public.t2 RENAME TO test.public.t3"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := txn.Exec("ALTER TABLE test.t3 RENAME TO test.t4"); err != nil {
+	if _, err := txn.Exec("ALTER TABLE test.public.t3 RENAME TO test.public.t4"); err != nil {
 		t.Fatal(err)
 	}
 	if err := txn.Commit(); err != nil {
@@ -336,13 +336,13 @@ CREATE TABLE test.t (a INT PRIMARY KEY);
 
 	// Check that the temp names have been properly cleaned up by creating tables
 	// with those names.
-	if _, err := db.Exec("CREATE TABLE test.t (a INT PRIMARY KEY)"); err != nil {
+	if _, err := db.Exec("CREATE TABLE test.public.t (a INT PRIMARY KEY)"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec("CREATE TABLE test.t2 (a INT PRIMARY KEY)"); err != nil {
+	if _, err := db.Exec("CREATE TABLE test.public.t2 (a INT PRIMARY KEY)"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec("CREATE TABLE test.t3 (a INT PRIMARY KEY)"); err != nil {
+	if _, err := db.Exec("CREATE TABLE test.public.t3 (a INT PRIMARY KEY)"); err != nil {
 		t.Fatal(err)
 	}
 }

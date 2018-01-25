@@ -38,6 +38,7 @@ func checkTableExists(ctx context.Context, p *planner, tn *tree.TableName) error
 //   Notes: postgres does not have a SHOW GRANTS statement.
 //          mysql only returns the user's privileges.
 func (p *planner) ShowGrants(ctx context.Context, n *tree.ShowGrants) (planNode, error) {
+	// FIXME XXX poop.
 	var params []string
 	var initCheck func(context.Context) error
 
@@ -110,7 +111,7 @@ func (p *planner) ShowGrants(ctx context.Context, n *tree.ShowGrants) (planNode,
 
 			for i := range allTables {
 				params = append(params, fmt.Sprintf("(%s,%s)",
-					lex.EscapeSQLString(allTables[i].Schema()),
+					lex.EscapeSQLString(allTables[i].Catalog()),
 					lex.EscapeSQLString(allTables[i].Table())))
 			}
 

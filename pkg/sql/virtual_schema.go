@@ -271,8 +271,8 @@ func (e *Executor) IsVirtualDatabase(name string) bool {
 // but the table is non-existent.
 // getVirtualTableEntry is part of the VirtualTabler interface.
 func (vs *VirtualSchemaHolder) getVirtualTableEntry(tn *tree.TableName) (virtualTableEntry, error) {
-	if db, ok := vs.getVirtualSchemaEntry(string(tn.SchemaName)); ok {
-		if t, ok := db.tables[string(tn.TableName)]; ok {
+	if db, ok := vs.getVirtualSchemaEntry(tn.Schema()); ok {
+		if t, ok := db.tables[tn.Table()]; ok {
 			return t, nil
 		}
 		return virtualTableEntry{}, sqlbase.NewUndefinedRelationError(tn)

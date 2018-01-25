@@ -37,7 +37,7 @@ func TestSplitAt(t *testing.T) {
 	r := sqlutils.MakeSQLRunner(db)
 
 	r.Exec(t, "CREATE DATABASE d")
-	r.Exec(t, `CREATE TABLE d.t (
+	r.Exec(t, `CREATE TABLE d.public.t (
 		i INT,
 		s STRING,
 		PRIMARY KEY (i, s),
@@ -51,37 +51,37 @@ func TestSplitAt(t *testing.T) {
 		args  []interface{}
 	}{
 		{
-			in: "ALTER TABLE d.t SPLIT AT VALUES (2, 'b')",
+			in: "ALTER TABLE d.public.t SPLIT AT VALUES (2, 'b')",
 		},
 		{
 			// Splitting at an existing split is a silent no-op.
-			in: "ALTER TABLE d.t SPLIT AT VALUES (2, 'b')",
+			in: "ALTER TABLE d.public.t SPLIT AT VALUES (2, 'b')",
 		},
 		{
-			in: "ALTER TABLE d.t SPLIT AT VALUES (3, 'c'), (4, 'd')",
+			in: "ALTER TABLE d.public.t SPLIT AT VALUES (3, 'c'), (4, 'd')",
 		},
 		{
-			in: "ALTER TABLE d.t SPLIT AT SELECT 5, 'd'",
+			in: "ALTER TABLE d.public.t SPLIT AT SELECT 5, 'd'",
 		},
 		{
-			in: "ALTER TABLE d.t SPLIT AT SELECT * FROM (VALUES (6, 'e'), (7, 'f')) AS a",
+			in: "ALTER TABLE d.public.t SPLIT AT SELECT * FROM (VALUES (6, 'e'), (7, 'f')) AS a",
 		},
 		{
-			in: "ALTER TABLE d.t SPLIT AT VALUES (10)",
+			in: "ALTER TABLE d.public.t SPLIT AT VALUES (10)",
 		},
 		{
-			in:    "ALTER TABLE d.t SPLIT AT VALUES ('c', 3)",
+			in:    "ALTER TABLE d.public.t SPLIT AT VALUES ('c', 3)",
 			error: "could not parse \"c\" as type int",
 		},
 		{
-			in:    "ALTER TABLE d.t SPLIT AT VALUES (i, s)",
+			in:    "ALTER TABLE d.public.t SPLIT AT VALUES (i, s)",
 			error: `name "i" is not defined`,
 		},
 		{
-			in: "ALTER INDEX d.t@s_idx SPLIT AT VALUES ('f')",
+			in: "ALTER INDEX d.public.t@s_idx SPLIT AT VALUES ('f')",
 		},
 		{
-			in:    "ALTER INDEX d.t@not_present SPLIT AT VALUES ('g')",
+			in:    "ALTER INDEX d.public.t@not_present SPLIT AT VALUES ('g')",
 			error: `index "not_present" does not exist`,
 		},
 		{
