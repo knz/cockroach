@@ -15,6 +15,7 @@
 package tree
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/davecgh/go-spew/spew"
@@ -85,6 +86,11 @@ func (node SelectExpr) Doc() pretty.Doc {
 	return d
 }
 
+func rpad(s string) string {
+	// The longest string is GROUP BY (8 chars).
+	return fmt.Sprintf("%9s", s)
+}
+
 func (t TableExprs) Doc() pretty.Doc {
 	if len(t) == 0 {
 		return pretty.Nil
@@ -93,14 +99,14 @@ func (t TableExprs) Doc() pretty.Doc {
 	for i, e := range t {
 		d[i] = DocNode(e)
 	}
-	return pretty.JoinGroup("FROM", ",", d...)
+	return pretty.JoinGroup(rpad("FROM"), ",", d...)
 }
 
 func (w *Where) Doc() pretty.Doc {
 	if w == nil {
 		return pretty.Nil
 	}
-	return pretty.Concat(pretty.Line, pretty.JoinGroup(w.Type, "", DocExpr(w.Expr)))
+	return pretty.Concat(pretty.Line, pretty.JoinGroup(rpad(w.Type), "", DocExpr(w.Expr)))
 }
 
 func (node GroupBy) Doc() pretty.Doc {
@@ -111,7 +117,7 @@ func (node GroupBy) Doc() pretty.Doc {
 	for i, e := range node {
 		d[i] = DocExpr(e)
 	}
-	return pretty.Concat(pretty.Line, pretty.JoinGroup("GROUP BY", ",", d...))
+	return pretty.Concat(pretty.Line, pretty.JoinGroup(rpad("GROUP BY"), ",", d...))
 }
 
 func (node *NormalizableTableName) Doc() pretty.Doc {
@@ -185,13 +191,13 @@ func (node *Limit) Doc() pretty.Doc {
 	if node.Count != nil {
 		count = pretty.Concat(
 			pretty.Line,
-			pretty.JoinGroup("LIMIT", "", DocExpr(node.Count)),
+			pretty.JoinGroup(rpad("LIMIT"), "", DocExpr(node.Count)),
 		)
 	}
 	if node.Offset != nil {
 		offset = pretty.Concat(
 			pretty.Line,
-			pretty.JoinGroup("OFFSET", "", DocExpr(node.Offset)),
+			pretty.JoinGroup(rpad("OFFSET"), "", DocExpr(node.Offset)),
 		)
 	}
 	return pretty.Concat(count, offset)
@@ -207,7 +213,7 @@ func (node *OrderBy) Doc() pretty.Doc {
 	}
 	return pretty.Concat(
 		pretty.Line,
-		pretty.JoinGroup("ORDER BY", ",", d...),
+		pretty.JoinGroup(rpad("ORDER BY"), ",", d...),
 	)
 }
 
@@ -230,7 +236,7 @@ func (node SelectClause) Doc() pretty.Doc {
 	}
 	return pretty.Fold(pretty.Concat,
 		pretty.Group(pretty.Fold(pretty.Concat,
-			pretty.Text("SELECT"),
+			pretty.Text(rpad("SELECT")),
 			distinct,
 			pretty.Nest(1, pretty.Concat(
 				pretty.Line,
