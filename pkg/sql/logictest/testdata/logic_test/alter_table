@@ -21,10 +21,10 @@ ALTER TABLE t ADD b INT
 query TTBTT colnames
 SHOW COLUMNS FROM t
 ----
-Field Type Null  Default Indices
-a     INT  false NULL    {"primary","t_f_idx"}
-f     INT  true  NULL    {"t_f_idx"}
-b     INT  true  NULL    {}
+column  type  nullable  default  indices
+a       INT   false     NULL     {"primary","t_f_idx"}
+f       INT   true      NULL     {"t_f_idx"}
+b       INT   true      NULL     {}
 
 statement ok
 ALTER TABLE t ADD CONSTRAINT foo UNIQUE (b)
@@ -404,12 +404,12 @@ ALTER TABLE tt ADD t DECIMAL UNIQUE DEFAULT 4.0
 query TTBTT colnames
 SHOW COLUMNS FROM tt
 ----
-Field  Type     Null   Default       Indices
-a      INT      false  NULL          {"primary","tt_s_key","tt_t_key"}
-q      DECIMAL  false  NULL          {}
-r      DECIMAL  true   NULL          {}
-s      DECIMAL  false  NULL          {"tt_s_key"}
-t      DECIMAL  true   4.0:::DECIMAL {"tt_t_key"}
+column  type     nullable  default        indices
+a       INT      false     NULL           {"primary","tt_s_key","tt_t_key"}
+q       DECIMAL  false     NULL           {}
+r       DECIMAL  true      NULL           {}
+s       DECIMAL  false     NULL           {"tt_s_key"}
+t       DECIMAL  true      4.0:::DECIMAL  {"tt_t_key"}
 
 # Default values can be added and changed after table creation.
 statement ok
@@ -581,9 +581,9 @@ user root
 query TTBTT colnames
 SHOW COLUMNS FROM privs
 ----
-Field Type Null  Default Indices
-a     INT  false NULL    {"primary"}
-b     INT  true  NULL    {}
+column  type  nullable  default  indices
+a       INT   false     NULL     {"primary"}
+b       INT   true      NULL     {}
 
 statement ok
 GRANT CREATE ON privs TO testuser
@@ -599,10 +599,10 @@ ALTER TABLE privs ADD CONSTRAINT foo UNIQUE (b)
 query TTBTT colnames
 SHOW COLUMNS FROM privs
 ----
-Field Type Null  Default Indices
-a     INT  false NULL    {"primary","foo"}
-b     INT  true  NULL    {"foo"}
-c     INT  true  NULL    {}
+column  type  nullable  default  indices
+a       INT   false     NULL     {"primary","foo"}
+b       INT   true      NULL     {"foo"}
+c       INT   true      NULL     {}
 
 statement error pgcode 42P01 relation "nonexistent" does not exist
 ALTER TABLE nonexistent SPLIT AT VALUES (42)

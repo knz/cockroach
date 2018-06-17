@@ -157,13 +157,13 @@ information_schema.tables  CREATE TABLE tables (
 query TTBTT colnames
 SHOW COLUMNS FROM information_schema.tables
 ----
-Field                  Type    Null   Default  Indices
-table_catalog          STRING  false  NULL     {}
-table_schema           STRING  false  NULL     {}
-table_name             STRING  false  NULL     {}
-table_type             STRING  false  NULL     {}
-is_insertable_into     STRING  false  NULL     {}
-version                INT     true   NULL     {}
+column              type    nullable  default  indices
+table_catalog       STRING  false     NULL     {}
+table_schema        STRING  false     NULL     {}
+table_name          STRING  false     NULL     {}
+table_type          STRING  false     NULL     {}
+is_insertable_into  STRING  false     NULL     {}
+version             INT     true      NULL     {}
 
 query TTBITTBB colnames
 SHOW INDEXES FROM information_schema.tables
@@ -1618,103 +1618,103 @@ DROP DATABASE other_db CASCADE
 query TTBTT colnames
 SHOW COLUMNS FROM information_schema.column_privileges
 ----
-Field           Type    Null   Default  Indices
-grantor         STRING  true   NULL     {}
-grantee         STRING  false  NULL     {}
-table_catalog   STRING  false  NULL     {}
-table_schema    STRING  false  NULL     {}
-table_name      STRING  false  NULL     {}
-column_name     STRING  false  NULL     {}
-privilege_type  STRING  false  NULL     {}
-is_grantable    STRING  true   NULL     {}
+column          type    nullable  default  indices
+grantor         STRING  true      NULL     {}
+grantee         STRING  false     NULL     {}
+table_catalog   STRING  false     NULL     {}
+table_schema    STRING  false     NULL     {}
+table_name      STRING  false     NULL     {}
+column_name     STRING  false     NULL     {}
+privilege_type  STRING  false     NULL     {}
+is_grantable    STRING  true      NULL     {}
 
 
 # test information_schema.routines
 query TTBTT colnames
 SHOW COLUMNS FROM information_schema.routines
 ----
-Field                                Type                      Null  Default  Indices
-specific_catalog                     STRING                    true  NULL     {}
-specific_schema                      STRING                    true  NULL     {}
-specific_name                        STRING                    true  NULL     {}
-routine_catalog                      STRING                    true  NULL     {}
-routine_schema                       STRING                    true  NULL     {}
-routine_name                         STRING                    true  NULL     {}
-routine_type                         STRING                    true  NULL     {}
-module_catalog                       STRING                    true  NULL     {}
-module_schema                        STRING                    true  NULL     {}
-module_name                          STRING                    true  NULL     {}
-udt_catalog                          STRING                    true  NULL     {}
-udt_schema                           STRING                    true  NULL     {}
-udt_name                             STRING                    true  NULL     {}
-data_type                            STRING                    true  NULL     {}
-character_maximum_length             INT                       true  NULL     {}
-character_octet_length               INT                       true  NULL     {}
-character_set_catalog                STRING                    true  NULL     {}
-character_set_schema                 STRING                    true  NULL     {}
-character_set_name                   STRING                    true  NULL     {}
-collation_catalog                    STRING                    true  NULL     {}
-collation_schema                     STRING                    true  NULL     {}
-collation_name                       STRING                    true  NULL     {}
-numeric_precision                    INT                       true  NULL     {}
-numeric_precision_radix              INT                       true  NULL     {}
-numeric_scale                        INT                       true  NULL     {}
-datetime_precision                   INT                       true  NULL     {}
-interval_type                        STRING                    true  NULL     {}
-interval_precision                   STRING                    true  NULL     {}
-type_udt_catalog                     STRING                    true  NULL     {}
-type_udt_schema                      STRING                    true  NULL     {}
-type_udt_name                        STRING                    true  NULL     {}
-scope_catalog                        STRING                    true  NULL     {}
-scope_name                           STRING                    true  NULL     {}
-maximum_cardinality                  INT                       true  NULL     {}
-dtd_identifier                       STRING                    true  NULL     {}
-routine_body                         STRING                    true  NULL     {}
-routine_definition                   STRING                    true  NULL     {}
-external_name                        STRING                    true  NULL     {}
-external_language                    STRING                    true  NULL     {}
-parameter_style                      STRING                    true  NULL     {}
-is_deterministic                      STRING                    true  NULL     {}
-sql_data_access                      STRING                    true  NULL     {}
-is_null_call                         STRING                    true  NULL     {}
-sql_path                             STRING                    true  NULL     {}
-schema_level_routine                 STRING                    true  NULL     {}
-max_dynamic_result_sets              INT                       true  NULL     {}
-is_user_defined_cast                 STRING                    true  NULL     {}
-is_implicitly_invocable              STRING                    true  NULL     {}
-security_type                        STRING                    true  NULL     {}
-to_sql_specific_catalog              STRING                    true  NULL     {}
-to_sql_specific_schema               STRING                    true  NULL     {}
-to_sql_specific_name                 STRING                    true  NULL     {}
-as_locator                           STRING                    true  NULL     {}
-created                              TIMESTAMP WITH TIME ZONE  true  NULL     {}
-last_altered                         TIMESTAMP WITH TIME ZONE  true  NULL     {}
-new_savepoint_level                  STRING                    true  NULL     {}
-is_udt_dependent                     STRING                    true  NULL     {}
-result_cast_from_data_type           STRING                    true  NULL     {}
-result_cast_as_locator               STRING                    true  NULL     {}
-result_cast_char_max_length          INT                       true  NULL     {}
-result_cast_char_octet_length        STRING                    true  NULL     {}
-result_cast_char_set_catalog         STRING                    true  NULL     {}
-result_cast_char_set_schema          STRING                    true  NULL     {}
-result_cast_char_set_name            STRING                    true  NULL     {}
-result_cast_collation_catalog        STRING                    true  NULL     {}
-result_cast_collation_schema         STRING                    true  NULL     {}
-result_cast_collation_name           STRING                    true  NULL     {}
-result_cast_numeric_precision        INT                       true  NULL     {}
-result_cast_numeric_precision_radix  INT                       true  NULL     {}
-result_cast_numeric_scale            INT                       true  NULL     {}
-result_cast_datetime_precision       STRING                    true  NULL     {}
-result_cast_interval_type            STRING                    true  NULL     {}
-result_cast_interval_precision       INT                       true  NULL     {}
-result_cast_type_udt_catalog         STRING                    true  NULL     {}
-result_cast_type_udt_schema          STRING                    true  NULL     {}
-result_cast_type_udt_name            STRING                    true  NULL     {}
-result_cast_scope_catalog            STRING                    true  NULL     {}
-result_cast_scope_schema             STRING                    true  NULL     {}
-result_cast_scope_name               STRING                    true  NULL     {}
-result_cast_maximum_cardinality      INT                       true  NULL     {}
-result_cast_dtd_identifier           STRING                    true  NULL     {}
+column                               type                      nullable  default  indices
+specific_catalog                     STRING                    true      NULL     {}
+specific_schema                      STRING                    true      NULL     {}
+specific_name                        STRING                    true      NULL     {}
+routine_catalog                      STRING                    true      NULL     {}
+routine_schema                       STRING                    true      NULL     {}
+routine_name                         STRING                    true      NULL     {}
+routine_type                         STRING                    true      NULL     {}
+module_catalog                       STRING                    true      NULL     {}
+module_schema                        STRING                    true      NULL     {}
+module_name                          STRING                    true      NULL     {}
+udt_catalog                          STRING                    true      NULL     {}
+udt_schema                           STRING                    true      NULL     {}
+udt_name                             STRING                    true      NULL     {}
+data_type                            STRING                    true      NULL     {}
+character_maximum_length             INT                       true      NULL     {}
+character_octet_length               INT                       true      NULL     {}
+character_set_catalog                STRING                    true      NULL     {}
+character_set_schema                 STRING                    true      NULL     {}
+character_set_name                   STRING                    true      NULL     {}
+collation_catalog                    STRING                    true      NULL     {}
+collation_schema                     STRING                    true      NULL     {}
+collation_name                       STRING                    true      NULL     {}
+numeric_precision                    INT                       true      NULL     {}
+numeric_precision_radix              INT                       true      NULL     {}
+numeric_scale                        INT                       true      NULL     {}
+datetime_precision                   INT                       true      NULL     {}
+interval_type                        STRING                    true      NULL     {}
+interval_precision                   STRING                    true      NULL     {}
+type_udt_catalog                     STRING                    true      NULL     {}
+type_udt_schema                      STRING                    true      NULL     {}
+type_udt_name                        STRING                    true      NULL     {}
+scope_catalog                        STRING                    true      NULL     {}
+scope_name                           STRING                    true      NULL     {}
+maximum_cardinality                  INT                       true      NULL     {}
+dtd_identifier                       STRING                    true      NULL     {}
+routine_body                         STRING                    true      NULL     {}
+routine_definition                   STRING                    true      NULL     {}
+external_name                        STRING                    true      NULL     {}
+external_language                    STRING                    true      NULL     {}
+parameter_style                      STRING                    true      NULL     {}
+is_deterministic                     STRING                    true      NULL     {}
+sql_data_access                      STRING                    true      NULL     {}
+is_null_call                         STRING                    true      NULL     {}
+sql_path                             STRING                    true      NULL     {}
+schema_level_routine                 STRING                    true      NULL     {}
+max_dynamic_result_sets              INT                       true      NULL     {}
+is_user_defined_cast                 STRING                    true      NULL     {}
+is_implicitly_invocable              STRING                    true      NULL     {}
+security_type                        STRING                    true      NULL     {}
+to_sql_specific_catalog              STRING                    true      NULL     {}
+to_sql_specific_schema               STRING                    true      NULL     {}
+to_sql_specific_name                 STRING                    true      NULL     {}
+as_locator                           STRING                    true      NULL     {}
+created                              TIMESTAMP WITH TIME ZONE  true      NULL     {}
+last_altered                         TIMESTAMP WITH TIME ZONE  true      NULL     {}
+new_savepoint_level                  STRING                    true      NULL     {}
+is_udt_dependent                     STRING                    true      NULL     {}
+result_cast_from_data_type           STRING                    true      NULL     {}
+result_cast_as_locator               STRING                    true      NULL     {}
+result_cast_char_max_length          INT                       true      NULL     {}
+result_cast_char_octet_length        STRING                    true      NULL     {}
+result_cast_char_set_catalog         STRING                    true      NULL     {}
+result_cast_char_set_schema          STRING                    true      NULL     {}
+result_cast_char_set_name            STRING                    true      NULL     {}
+result_cast_collation_catalog        STRING                    true      NULL     {}
+result_cast_collation_schema         STRING                    true      NULL     {}
+result_cast_collation_name           STRING                    true      NULL     {}
+result_cast_numeric_precision        INT                       true      NULL     {}
+result_cast_numeric_precision_radix  INT                       true      NULL     {}
+result_cast_numeric_scale            INT                       true      NULL     {}
+result_cast_datetime_precision       STRING                    true      NULL     {}
+result_cast_interval_type            STRING                    true      NULL     {}
+result_cast_interval_precision       INT                       true      NULL     {}
+result_cast_type_udt_catalog         STRING                    true      NULL     {}
+result_cast_type_udt_schema          STRING                    true      NULL     {}
+result_cast_type_udt_name            STRING                    true      NULL     {}
+result_cast_scope_catalog            STRING                    true      NULL     {}
+result_cast_scope_schema             STRING                    true      NULL     {}
+result_cast_scope_name               STRING                    true      NULL     {}
+result_cast_maximum_cardinality      INT                       true      NULL     {}
+result_cast_dtd_identifier           STRING                    true      NULL     {}
 
 query TTTTTTTTTTTTTTIITTTTTTIIIITTTTTTTITTTTTTTTTTTITTTTTTTTTTTTTITTTTTTTIIITTITTTTTTIT colnames
 SELECT * FROM information_schema.routines
@@ -1725,39 +1725,39 @@ specific_catalog  specific_schema  specific_name  routine_catalog  routine_schem
 query TTBTT colnames
 SHOW COLUMNS FROM information_schema.parameters
 ----
-Field                     Type    Null  Default  Indices
-specific_catalog          STRING  true  NULL     {}
-specific_schema           STRING  true  NULL     {}
-specific_name             STRING  true  NULL     {}
-ordinal_position          INT     true  NULL     {}
-parameter_mode            STRING  true  NULL     {}
-is_result                 STRING  true  NULL     {}
-as_locator                STRING  true  NULL     {}
-parameter_name            STRING  true  NULL     {}
-data_type                 STRING  true  NULL     {}
-character_maximum_length  INT     true  NULL     {}
-character_octet_length    INT     true  NULL     {}
-character_set_catalog     STRING  true  NULL     {}
-character_set_schema      STRING  true  NULL     {}
-character_set_name        STRING  true  NULL     {}
-collation_catalog         STRING  true  NULL     {}
-collation_schema          STRING  true  NULL     {}
-collation_name            STRING  true  NULL     {}
-numeric_precision         INT     true  NULL     {}
-numeric_precision_radix   INT     true  NULL     {}
-numeric_scale             INT     true  NULL     {}
-datetime_precision        INT     true  NULL     {}
-interval_type             STRING  true  NULL     {}
-interval_precision        INT     true  NULL     {}
-udt_catalog               STRING  true  NULL     {}
-udt_schema                STRING  true  NULL     {}
-udt_name                  STRING  true  NULL     {}
-scope_catalog             STRING  true  NULL     {}
-scope_schema              STRING  true  NULL     {}
-scope_name                STRING  true  NULL     {}
-maximum_cardinality       INT     true  NULL     {}
-dtd_identifier            STRING  true  NULL     {}
-parameter_default         STRING  true  NULL     {}
+column                    type    nullable  default  indices
+specific_catalog          STRING  true      NULL     {}
+specific_schema           STRING  true      NULL     {}
+specific_name             STRING  true      NULL     {}
+ordinal_position          INT     true      NULL     {}
+parameter_mode            STRING  true      NULL     {}
+is_result                 STRING  true      NULL     {}
+as_locator                STRING  true      NULL     {}
+parameter_name            STRING  true      NULL     {}
+data_type                 STRING  true      NULL     {}
+character_maximum_length  INT     true      NULL     {}
+character_octet_length    INT     true      NULL     {}
+character_set_catalog     STRING  true      NULL     {}
+character_set_schema      STRING  true      NULL     {}
+character_set_name        STRING  true      NULL     {}
+collation_catalog         STRING  true      NULL     {}
+collation_schema          STRING  true      NULL     {}
+collation_name            STRING  true      NULL     {}
+numeric_precision         INT     true      NULL     {}
+numeric_precision_radix   INT     true      NULL     {}
+numeric_scale             INT     true      NULL     {}
+datetime_precision        INT     true      NULL     {}
+interval_type             STRING  true      NULL     {}
+interval_precision        INT     true      NULL     {}
+udt_catalog               STRING  true      NULL     {}
+udt_schema                STRING  true      NULL     {}
+udt_name                  STRING  true      NULL     {}
+scope_catalog             STRING  true      NULL     {}
+scope_schema              STRING  true      NULL     {}
+scope_name                STRING  true      NULL     {}
+maximum_cardinality       INT     true      NULL     {}
+dtd_identifier            STRING  true      NULL     {}
+parameter_default         STRING  true      NULL     {}
 
 query TTTITTTTTIITTTTTTIIIITITTTTTTITT colnames
 SELECT * FROM information_schema.parameters

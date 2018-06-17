@@ -16,11 +16,11 @@ ALTER TABLE t ALTER s TYPE BYTES, ALTER sl TYPE STRING(6), ALTER ts TYPE TIMESTA
 query TTBTT colnames
 SHOW COLUMNS FROM t
 ----
-Field  Type                      Null  Default  Indices
-s      BYTES                     true  NULL     {}
-sl     STRING(6)                 true  NULL     {}
-t      TIME                      true  NULL     {}
-ts     TIMESTAMP WITH TIME ZONE  true  NULL     {}
+column  type                      nullable  default  indices
+s       BYTES                     true      NULL     {}
+sl      STRING(6)                 true      NULL     {}
+t       TIME                      true      NULL     {}
+ts      TIMESTAMP WITH TIME ZONE  true      NULL     {}
 
 query TTTT
 SELECT * FROM t
@@ -99,8 +99,8 @@ CREATE TABLE t (a INT)
 query TTBTT colnames
 SHOW COLUMNS FROM t
 ----
-Field  Type  Null  Default  Indices
-a      INT   true  NULL     {}
+column  type  nullable  default  indices
+a       INT   true      NULL     {}
 
 statement ok
 ALTER TABLE t ALTER a TYPE INTEGER
@@ -108,8 +108,8 @@ ALTER TABLE t ALTER a TYPE INTEGER
 query TTBTT colnames
 SHOW COLUMNS FROM t
 ----
-Field  Type  Null  Default  Indices
-a      INTEGER   true  NULL     {}
+column  type     nullable  default  indices
+a       INTEGER  true      NULL     {}
 
 statement ok
 DROP TABLE t

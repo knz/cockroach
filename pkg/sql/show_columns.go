@@ -27,11 +27,11 @@ import (
 func (p *planner) ShowColumns(ctx context.Context, n *tree.ShowColumns) (planNode, error) {
 	const getColumnsQuery = `
 				SELECT
-					column_name AS "Field",
-					data_type AS "Type",
-					(is_nullable != 'NO') AS "Null",
-					column_default AS "Default",
-					IF(inames[1] IS NULL, ARRAY[]:::STRING[], inames) AS "Indices"
+					column_name AS column,
+					data_type AS type,
+					(is_nullable != 'NO') AS nullable,
+					column_default AS "default",
+					IF(inames[1] IS NULL, ARRAY[]:::STRING[], inames) AS indices
 				FROM
 					(SELECT column_name, data_type, is_nullable, column_default, ordinal_position,
 									array_agg(index_name) AS inames
