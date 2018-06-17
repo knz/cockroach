@@ -21,9 +21,9 @@ import (
 )
 
 func (p *planner) ShowQueries(ctx context.Context, n *tree.ShowQueries) (planNode, error) {
-	query := `TABLE crdb_internal.node_queries`
+	query := `SELECT query_id, node_id, username, start, query, client_address, application_name, distributed, phase FROM crdb_internal.node_queries`
 	if n.Cluster {
-		query = `TABLE crdb_internal.cluster_queries`
+		query = `SELECT query_id, node_id, username, start, query, client_address, application_name, distributed, phase FROM crdb_internal.cluster_queries`
 	}
 	return p.delegateQuery(ctx, "SHOW QUERIES", query, nil, nil)
 }
