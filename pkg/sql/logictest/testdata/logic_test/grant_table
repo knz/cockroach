@@ -12,7 +12,7 @@ GRANT ALL ON DATABASE a TO readwrite
 query TTTT colnames
 SHOW GRANTS ON DATABASE a
 ----
-Database  Schema              User       Privileges
+database  schema              grantee    privileges
 a         crdb_internal       admin      ALL
 a         crdb_internal       readwrite  ALL
 a         crdb_internal       root       ALL
@@ -30,112 +30,112 @@ a         public              root       ALL
 query TTTTT colnames
 SHOW GRANTS
 ----
-Database  Schema              Table                              User    Privileges
-test      crdb_internal       NULL                               admin   ALL
-test      crdb_internal       NULL                               root    ALL
-test      crdb_internal       backward_dependencies              public  SELECT
-test      crdb_internal       builtin_functions                  public  SELECT
-test      crdb_internal       cluster_queries                    public  SELECT
-test      crdb_internal       cluster_sessions                   public  SELECT
-test      crdb_internal       cluster_settings                   public  SELECT
-test      crdb_internal       create_statements                  public  SELECT
-test      crdb_internal       forward_dependencies               public  SELECT
-test      crdb_internal       gossip_alerts                      public  SELECT
-test      crdb_internal       gossip_liveness                    public  SELECT
-test      crdb_internal       gossip_nodes                       public  SELECT
-test      crdb_internal       index_columns                      public  SELECT
-test      crdb_internal       jobs                               public  SELECT
-test      crdb_internal       kv_node_status                     public  SELECT
-test      crdb_internal       kv_store_status                    public  SELECT
-test      crdb_internal       leases                             public  SELECT
-test      crdb_internal       node_build_info                    public  SELECT
-test      crdb_internal       node_metrics                       public  SELECT
-test      crdb_internal       node_queries                       public  SELECT
-test      crdb_internal       node_runtime_info                  public  SELECT
-test      crdb_internal       node_sessions                      public  SELECT
-test      crdb_internal       node_statement_statistics          public  SELECT
-test      crdb_internal       partitions                         public  SELECT
-test      crdb_internal       ranges                             public  SELECT
-test      crdb_internal       schema_changes                     public  SELECT
-test      crdb_internal       session_trace                      public  SELECT
-test      crdb_internal       session_variables                  public  SELECT
-test      crdb_internal       table_columns                      public  SELECT
-test      crdb_internal       table_indexes                      public  SELECT
-test      crdb_internal       tables                             public  SELECT
-test      crdb_internal       zones                              public  SELECT
-test      information_schema  NULL                               admin   ALL
-test      information_schema  NULL                               root    ALL
-test      information_schema  administrable_role_authorizations  public  SELECT
-test      information_schema  applicable_roles                   public  SELECT
-test      information_schema  column_privileges                  public  SELECT
-test      information_schema  columns                            public  SELECT
-test      information_schema  constraint_column_usage            public  SELECT
-test      information_schema  enabled_roles                      public  SELECT
-test      information_schema  key_column_usage                   public  SELECT
-test      information_schema  parameters                         public  SELECT
-test      information_schema  referential_constraints            public  SELECT
-test      information_schema  role_table_grants                  public  SELECT
-test      information_schema  routines                           public  SELECT
-test      information_schema  schema_privileges                  public  SELECT
-test      information_schema  schemata                           public  SELECT
-test      information_schema  sequences                          public  SELECT
-test      information_schema  statistics                         public  SELECT
-test      information_schema  table_constraints                  public  SELECT
-test      information_schema  table_privileges                   public  SELECT
-test      information_schema  tables                             public  SELECT
-test      information_schema  user_privileges                    public  SELECT
-test      information_schema  views                              public  SELECT
-test      pg_catalog          NULL                               admin   ALL
-test      pg_catalog          NULL                               root    ALL
-test      pg_catalog          pg_am                              public  SELECT
-test      pg_catalog          pg_attrdef                         public  SELECT
-test      pg_catalog          pg_attribute                       public  SELECT
-test      pg_catalog          pg_auth_members                    public  SELECT
-test      pg_catalog          pg_class                           public  SELECT
-test      pg_catalog          pg_collation                       public  SELECT
-test      pg_catalog          pg_constraint                      public  SELECT
-test      pg_catalog          pg_database                        public  SELECT
-test      pg_catalog          pg_depend                          public  SELECT
-test      pg_catalog          pg_description                     public  SELECT
-test      pg_catalog          pg_enum                            public  SELECT
-test      pg_catalog          pg_extension                       public  SELECT
-test      pg_catalog          pg_foreign_data_wrapper            public  SELECT
-test      pg_catalog          pg_foreign_server                  public  SELECT
-test      pg_catalog          pg_foreign_table                   public  SELECT
-test      pg_catalog          pg_index                           public  SELECT
-test      pg_catalog          pg_indexes                         public  SELECT
-test      pg_catalog          pg_inherits                        public  SELECT
-test      pg_catalog          pg_language                        public  SELECT
-test      pg_catalog          pg_namespace                       public  SELECT
-test      pg_catalog          pg_operator                        public  SELECT
-test      pg_catalog          pg_proc                            public  SELECT
-test      pg_catalog          pg_range                           public  SELECT
-test      pg_catalog          pg_rewrite                         public  SELECT
-test      pg_catalog          pg_roles                           public  SELECT
-test      pg_catalog          pg_seclabel                        public  SELECT
-test      pg_catalog          pg_sequence                        public  SELECT
-test      pg_catalog          pg_settings                        public  SELECT
-test      pg_catalog          pg_shdescription                   public  SELECT
-test      pg_catalog          pg_shseclabel                      public  SELECT
-test      pg_catalog          pg_stat_activity                   public  SELECT
-test      pg_catalog          pg_tables                          public  SELECT
-test      pg_catalog          pg_tablespace                      public  SELECT
-test      pg_catalog          pg_trigger                         public  SELECT
-test      pg_catalog          pg_type                            public  SELECT
-test      pg_catalog          pg_user                            public  SELECT
-test      pg_catalog          pg_user_mapping                    public  SELECT
-test      pg_catalog          pg_views                           public  SELECT
-test      public              NULL                               admin   ALL
-test      public              NULL                               root    ALL
+database  schema              object                             grantee  privileges
+test      crdb_internal       NULL                               admin    ALL
+test      crdb_internal       NULL                               root     ALL
+test      crdb_internal       backward_dependencies              public   SELECT
+test      crdb_internal       builtin_functions                  public   SELECT
+test      crdb_internal       cluster_queries                    public   SELECT
+test      crdb_internal       cluster_sessions                   public   SELECT
+test      crdb_internal       cluster_settings                   public   SELECT
+test      crdb_internal       create_statements                  public   SELECT
+test      crdb_internal       forward_dependencies               public   SELECT
+test      crdb_internal       gossip_alerts                      public   SELECT
+test      crdb_internal       gossip_liveness                    public   SELECT
+test      crdb_internal       gossip_nodes                       public   SELECT
+test      crdb_internal       index_columns                      public   SELECT
+test      crdb_internal       jobs                               public   SELECT
+test      crdb_internal       kv_node_status                     public   SELECT
+test      crdb_internal       kv_store_status                    public   SELECT
+test      crdb_internal       leases                             public   SELECT
+test      crdb_internal       node_build_info                    public   SELECT
+test      crdb_internal       node_metrics                       public   SELECT
+test      crdb_internal       node_queries                       public   SELECT
+test      crdb_internal       node_runtime_info                  public   SELECT
+test      crdb_internal       node_sessions                      public   SELECT
+test      crdb_internal       node_statement_statistics          public   SELECT
+test      crdb_internal       partitions                         public   SELECT
+test      crdb_internal       ranges                             public   SELECT
+test      crdb_internal       schema_changes                     public   SELECT
+test      crdb_internal       session_trace                      public   SELECT
+test      crdb_internal       session_variables                  public   SELECT
+test      crdb_internal       table_columns                      public   SELECT
+test      crdb_internal       table_indexes                      public   SELECT
+test      crdb_internal       tables                             public   SELECT
+test      crdb_internal       zones                              public   SELECT
+test      information_schema  NULL                               admin    ALL
+test      information_schema  NULL                               root     ALL
+test      information_schema  administrable_role_authorizations  public   SELECT
+test      information_schema  applicable_roles                   public   SELECT
+test      information_schema  column_privileges                  public   SELECT
+test      information_schema  columns                            public   SELECT
+test      information_schema  constraint_column_usage            public   SELECT
+test      information_schema  enabled_roles                      public   SELECT
+test      information_schema  key_column_usage                   public   SELECT
+test      information_schema  parameters                         public   SELECT
+test      information_schema  referential_constraints            public   SELECT
+test      information_schema  role_table_grants                  public   SELECT
+test      information_schema  routines                           public   SELECT
+test      information_schema  schema_privileges                  public   SELECT
+test      information_schema  schemata                           public   SELECT
+test      information_schema  sequences                          public   SELECT
+test      information_schema  statistics                         public   SELECT
+test      information_schema  table_constraints                  public   SELECT
+test      information_schema  table_privileges                   public   SELECT
+test      information_schema  tables                             public   SELECT
+test      information_schema  user_privileges                    public   SELECT
+test      information_schema  views                              public   SELECT
+test      pg_catalog          NULL                               admin    ALL
+test      pg_catalog          NULL                               root     ALL
+test      pg_catalog          pg_am                              public   SELECT
+test      pg_catalog          pg_attrdef                         public   SELECT
+test      pg_catalog          pg_attribute                       public   SELECT
+test      pg_catalog          pg_auth_members                    public   SELECT
+test      pg_catalog          pg_class                           public   SELECT
+test      pg_catalog          pg_collation                       public   SELECT
+test      pg_catalog          pg_constraint                      public   SELECT
+test      pg_catalog          pg_database                        public   SELECT
+test      pg_catalog          pg_depend                          public   SELECT
+test      pg_catalog          pg_description                     public   SELECT
+test      pg_catalog          pg_enum                            public   SELECT
+test      pg_catalog          pg_extension                       public   SELECT
+test      pg_catalog          pg_foreign_data_wrapper            public   SELECT
+test      pg_catalog          pg_foreign_server                  public   SELECT
+test      pg_catalog          pg_foreign_table                   public   SELECT
+test      pg_catalog          pg_index                           public   SELECT
+test      pg_catalog          pg_indexes                         public   SELECT
+test      pg_catalog          pg_inherits                        public   SELECT
+test      pg_catalog          pg_language                        public   SELECT
+test      pg_catalog          pg_namespace                       public   SELECT
+test      pg_catalog          pg_operator                        public   SELECT
+test      pg_catalog          pg_proc                            public   SELECT
+test      pg_catalog          pg_range                           public   SELECT
+test      pg_catalog          pg_rewrite                         public   SELECT
+test      pg_catalog          pg_roles                           public   SELECT
+test      pg_catalog          pg_seclabel                        public   SELECT
+test      pg_catalog          pg_sequence                        public   SELECT
+test      pg_catalog          pg_settings                        public   SELECT
+test      pg_catalog          pg_shdescription                   public   SELECT
+test      pg_catalog          pg_shseclabel                      public   SELECT
+test      pg_catalog          pg_stat_activity                   public   SELECT
+test      pg_catalog          pg_tables                          public   SELECT
+test      pg_catalog          pg_tablespace                      public   SELECT
+test      pg_catalog          pg_trigger                         public   SELECT
+test      pg_catalog          pg_type                            public   SELECT
+test      pg_catalog          pg_user                            public   SELECT
+test      pg_catalog          pg_user_mapping                    public   SELECT
+test      pg_catalog          pg_views                           public   SELECT
+test      public              NULL                               admin    ALL
+test      public              NULL                               root     ALL
 
 query TTTTT colnames
 SHOW GRANTS FOR root
 ----
-Database  Schema              Table  User  Privileges
-test      crdb_internal       NULL   root  ALL
-test      information_schema  NULL   root  ALL
-test      pg_catalog          NULL   root  ALL
-test      public              NULL   root  ALL
+database  schema              object  grantee  privileges
+test      crdb_internal       NULL    root     ALL
+test      information_schema  NULL    root     ALL
+test      pg_catalog          NULL    root     ALL
+test      public              NULL    root     ALL
 
 # With no database set, we show the grants everywhere
 statement ok
@@ -143,9 +143,9 @@ SET DATABASE = ''
 
 query TTTTT colnames
 SELECT * FROM [SHOW GRANTS]
- WHERE "Schema" NOT IN ('crdb_internal', 'pg_catalog', 'information_schema')
+ WHERE schema NOT IN ('crdb_internal', 'pg_catalog', 'information_schema')
 ----
-Database   Schema  Table             User       Privileges
+database   schema  object            grantee    privileges
 a          public  NULL              admin      ALL
 a          public  NULL              readwrite  ALL
 a          public  NULL              root       ALL
@@ -291,95 +291,95 @@ test       public  NULL              root       ALL
 query TTTTT colnames
 SHOW GRANTS FOR root
 ----
-Database   Schema              Table             User  Privileges
-a          crdb_internal       NULL              root  ALL
-a          information_schema  NULL              root  ALL
-a          pg_catalog          NULL              root  ALL
-a          public              NULL              root  ALL
-defaultdb  crdb_internal       NULL              root  ALL
-defaultdb  information_schema  NULL              root  ALL
-defaultdb  pg_catalog          NULL              root  ALL
-defaultdb  public              NULL              root  ALL
-postgres   crdb_internal       NULL              root  ALL
-postgres   information_schema  NULL              root  ALL
-postgres   pg_catalog          NULL              root  ALL
-postgres   public              NULL              root  ALL
-system     crdb_internal       NULL              root  GRANT
-system     crdb_internal       NULL              root  SELECT
-system     information_schema  NULL              root  SELECT
-system     information_schema  NULL              root  GRANT
-system     pg_catalog          NULL              root  GRANT
-system     pg_catalog          NULL              root  SELECT
-system     public              NULL              root  SELECT
-system     public              NULL              root  GRANT
-system     public              descriptor        root  SELECT
-system     public              descriptor        root  GRANT
-system     public              eventlog          root  SELECT
-system     public              eventlog          root  UPDATE
-system     public              eventlog          root  DELETE
-system     public              eventlog          root  GRANT
-system     public              eventlog          root  INSERT
-system     public              jobs              root  UPDATE
-system     public              jobs              root  DELETE
-system     public              jobs              root  SELECT
-system     public              jobs              root  INSERT
-system     public              jobs              root  GRANT
-system     public              lease             root  DELETE
-system     public              lease             root  SELECT
-system     public              lease             root  UPDATE
-system     public              lease             root  GRANT
-system     public              lease             root  INSERT
-system     public              locations         root  INSERT
-system     public              locations         root  UPDATE
-system     public              locations         root  GRANT
-system     public              locations         root  DELETE
-system     public              locations         root  SELECT
-system     public              namespace         root  SELECT
-system     public              namespace         root  GRANT
-system     public              rangelog          root  INSERT
-system     public              rangelog          root  UPDATE
-system     public              rangelog          root  DELETE
-system     public              rangelog          root  GRANT
-system     public              rangelog          root  SELECT
-system     public              role_members      root  SELECT
-system     public              role_members      root  INSERT
-system     public              role_members      root  UPDATE
-system     public              role_members      root  DELETE
-system     public              role_members      root  GRANT
-system     public              settings          root  INSERT
-system     public              settings          root  GRANT
-system     public              settings          root  SELECT
-system     public              settings          root  DELETE
-system     public              settings          root  UPDATE
-system     public              table_statistics  root  GRANT
-system     public              table_statistics  root  DELETE
-system     public              table_statistics  root  UPDATE
-system     public              table_statistics  root  SELECT
-system     public              table_statistics  root  INSERT
-system     public              ui                root  SELECT
-system     public              ui                root  DELETE
-system     public              ui                root  GRANT
-system     public              ui                root  INSERT
-system     public              ui                root  UPDATE
-system     public              users             root  GRANT
-system     public              users             root  UPDATE
-system     public              users             root  DELETE
-system     public              users             root  SELECT
-system     public              users             root  INSERT
-system     public              web_sessions      root  GRANT
-system     public              web_sessions      root  INSERT
-system     public              web_sessions      root  SELECT
-system     public              web_sessions      root  UPDATE
-system     public              web_sessions      root  DELETE
-system     public              zones             root  GRANT
-system     public              zones             root  UPDATE
-system     public              zones             root  SELECT
-system     public              zones             root  INSERT
-system     public              zones             root  DELETE
-test       crdb_internal       NULL              root  ALL
-test       information_schema  NULL              root  ALL
-test       pg_catalog          NULL              root  ALL
-test       public              NULL              root  ALL
+database   schema              object            grantee  privileges
+a          crdb_internal       NULL              root     ALL
+a          information_schema  NULL              root     ALL
+a          pg_catalog          NULL              root     ALL
+a          public              NULL              root     ALL
+defaultdb  crdb_internal       NULL              root     ALL
+defaultdb  information_schema  NULL              root     ALL
+defaultdb  pg_catalog          NULL              root     ALL
+defaultdb  public              NULL              root     ALL
+postgres   crdb_internal       NULL              root     ALL
+postgres   information_schema  NULL              root     ALL
+postgres   pg_catalog          NULL              root     ALL
+postgres   public              NULL              root     ALL
+system     crdb_internal       NULL              root     GRANT
+system     crdb_internal       NULL              root     SELECT
+system     information_schema  NULL              root     SELECT
+system     information_schema  NULL              root     GRANT
+system     pg_catalog          NULL              root     GRANT
+system     pg_catalog          NULL              root     SELECT
+system     public              NULL              root     SELECT
+system     public              NULL              root     GRANT
+system     public              descriptor        root     SELECT
+system     public              descriptor        root     GRANT
+system     public              eventlog          root     SELECT
+system     public              eventlog          root     UPDATE
+system     public              eventlog          root     DELETE
+system     public              eventlog          root     GRANT
+system     public              eventlog          root     INSERT
+system     public              jobs              root     UPDATE
+system     public              jobs              root     DELETE
+system     public              jobs              root     SELECT
+system     public              jobs              root     INSERT
+system     public              jobs              root     GRANT
+system     public              lease             root     DELETE
+system     public              lease             root     SELECT
+system     public              lease             root     UPDATE
+system     public              lease             root     GRANT
+system     public              lease             root     INSERT
+system     public              locations         root     INSERT
+system     public              locations         root     UPDATE
+system     public              locations         root     GRANT
+system     public              locations         root     DELETE
+system     public              locations         root     SELECT
+system     public              namespace         root     SELECT
+system     public              namespace         root     GRANT
+system     public              rangelog          root     INSERT
+system     public              rangelog          root     UPDATE
+system     public              rangelog          root     DELETE
+system     public              rangelog          root     GRANT
+system     public              rangelog          root     SELECT
+system     public              role_members      root     SELECT
+system     public              role_members      root     INSERT
+system     public              role_members      root     UPDATE
+system     public              role_members      root     DELETE
+system     public              role_members      root     GRANT
+system     public              settings          root     INSERT
+system     public              settings          root     GRANT
+system     public              settings          root     SELECT
+system     public              settings          root     DELETE
+system     public              settings          root     UPDATE
+system     public              table_statistics  root     GRANT
+system     public              table_statistics  root     DELETE
+system     public              table_statistics  root     UPDATE
+system     public              table_statistics  root     SELECT
+system     public              table_statistics  root     INSERT
+system     public              ui                root     SELECT
+system     public              ui                root     DELETE
+system     public              ui                root     GRANT
+system     public              ui                root     INSERT
+system     public              ui                root     UPDATE
+system     public              users             root     GRANT
+system     public              users             root     UPDATE
+system     public              users             root     DELETE
+system     public              users             root     SELECT
+system     public              users             root     INSERT
+system     public              web_sessions      root     GRANT
+system     public              web_sessions      root     INSERT
+system     public              web_sessions      root     SELECT
+system     public              web_sessions      root     UPDATE
+system     public              web_sessions      root     DELETE
+system     public              zones             root     GRANT
+system     public              zones             root     UPDATE
+system     public              zones             root     SELECT
+system     public              zones             root     INSERT
+system     public              zones             root     DELETE
+test       crdb_internal       NULL              root     ALL
+test       information_schema  NULL              root     ALL
+test       pg_catalog          NULL              root     ALL
+test       public              NULL              root     ALL
 
 statement error pgcode 42P01 relation "a.t" does not exist
 SHOW GRANTS ON a.t
@@ -402,18 +402,18 @@ CREATE TABLE t (id INT PRIMARY KEY)
 query TTTTT colnames
 SHOW GRANTS ON t
 ----
-Database  Schema  Table  User       Privileges
-a         public  t      admin      ALL
-a         public  t      readwrite  ALL
-a         public  t      root       ALL
+database  schema  object  grantee    privileges
+a         public  t       admin      ALL
+a         public  t       readwrite  ALL
+a         public  t       root       ALL
 
 query TTTTT colnames
 SHOW GRANTS ON a.t
 ----
-Database  Schema  Table  User       Privileges
-a         public  t      admin      ALL
-a         public  t      readwrite  ALL
-a         public  t      root       ALL
+database  schema  object  grantee    privileges
+a         public  t       admin      ALL
+a         public  t       readwrite  ALL
+a         public  t       root       ALL
 
 statement ok
 INSERT INTO system.users VALUES('test-user','');
@@ -520,18 +520,18 @@ CREATE VIEW v as SELECT id FROM t
 query TTTTT colnames
 SHOW GRANTS ON v
 ----
-Database  Schema  Table  User       Privileges
-a         public  v      admin      ALL
-a         public  v      readwrite  ALL
-a         public  v      root       ALL
+database  schema  object  grantee    privileges
+a         public  v       admin      ALL
+a         public  v       readwrite  ALL
+a         public  v       root       ALL
 
 query TTTTT colnames
 SHOW GRANTS ON a.v
 ----
-Database  Schema  Table  User       Privileges
-a         public  v      admin      ALL
-a         public  v      readwrite  ALL
-a         public  v      root       ALL
+database  schema  object  grantee    privileges
+a         public  v       admin      ALL
+a         public  v       readwrite  ALL
+a         public  v       root       ALL
 
 statement ok
 GRANT ALL ON v TO readwrite, "test-user"
@@ -656,7 +656,7 @@ a  public              NULL  readwrite  ALL
 query TTTT colnames
 SHOW GRANTS ON DATABASE a
 ----
-Database  Schema              User       Privileges
+database  schema              grantee    privileges
 a         crdb_internal       admin      ALL
 a         crdb_internal       readwrite  ALL
 a         crdb_internal       root       ALL
@@ -719,13 +719,13 @@ GRANT ALL ON * TO Vanilli
 query TTTTT colnames
 SHOW GRANTS ON *
 ----
-Database  Schema  Table  User     Privileges
-b         public  t      admin    ALL
-b         public  t      root     ALL
-b         public  t      vanilli  ALL
-b         public  t2     admin    ALL
-b         public  t2     root     ALL
-b         public  t2     vanilli  ALL
+database  schema  object  grantee  privileges
+b         public  t       admin    ALL
+b         public  t       root     ALL
+b         public  t       vanilli  ALL
+b         public  t2      admin    ALL
+b         public  t2      root     ALL
+b         public  t2      vanilli  ALL
 
 
 # Multiple targets.
@@ -738,38 +738,38 @@ GRANT ALL ON c.*, b.t TO Millie
 query TTTTT colnames
 SHOW GRANTS ON b.*
 ----
-Database  Schema  Table  User     Privileges
-b         public  t      admin    ALL
-b         public  t      millie   ALL
-b         public  t      root     ALL
-b         public  t      vanilli  ALL
-b         public  t2     admin    ALL
-b         public  t2     root     ALL
-b         public  t2     vanilli  ALL
+database  schema  object  grantee  privileges
+b         public  t       admin    ALL
+b         public  t       millie   ALL
+b         public  t       root     ALL
+b         public  t       vanilli  ALL
+b         public  t2      admin    ALL
+b         public  t2      root     ALL
+b         public  t2      vanilli  ALL
 
 query TTTTT colnames
 SHOW GRANTS ON a.*, b.*
 ----
-Database  Schema  Table  User     Privileges
-a         public  t      admin    ALL
-a         public  t      root     ALL
-a         public  v      admin    ALL
-a         public  v      root     ALL
-b         public  t      admin    ALL
-b         public  t      millie   ALL
-b         public  t      root     ALL
-b         public  t      vanilli  ALL
-b         public  t2     admin    ALL
-b         public  t2     root     ALL
-b         public  t2     vanilli  ALL
+database  schema  object  grantee  privileges
+a         public  t       admin    ALL
+a         public  t       root     ALL
+a         public  v       admin    ALL
+a         public  v       root     ALL
+b         public  t       admin    ALL
+b         public  t       millie   ALL
+b         public  t       root     ALL
+b         public  t       vanilli  ALL
+b         public  t2      admin    ALL
+b         public  t2      root     ALL
+b         public  t2      vanilli  ALL
 
 query TTTTT colnames
 SHOW GRANTS ON c.t
 ----
-Database  Schema  Table  User    Privileges
-c         public  t      admin   ALL
-c         public  t      millie  ALL
-c         public  t      root    ALL
+database  schema  object  grantee  privileges
+c         public  t       admin    ALL
+c         public  t       millie   ALL
+c         public  t       root     ALL
 
 statement ok
 REVOKE ALL ON *, c.* FROM Vanilli
@@ -777,12 +777,12 @@ REVOKE ALL ON *, c.* FROM Vanilli
 query TTTTT colnames
 SHOW GRANTS ON b.*
 ----
-Database  Schema  Table  User    Privileges
-b         public  t      admin   ALL
-b         public  t      millie  ALL
-b         public  t      root    ALL
-b         public  t2     admin   ALL
-b         public  t2     root    ALL
+database  schema  object  grantee  privileges
+b         public  t       admin    ALL
+b         public  t       millie   ALL
+b         public  t       root     ALL
+b         public  t2      admin    ALL
+b         public  t2      root     ALL
 
 statement ok
 CREATE DATABASE empty
@@ -790,14 +790,14 @@ CREATE DATABASE empty
 query TTTTT colnames
 SHOW GRANTS ON empty.*
 ----
-Database  Schema  Table  User  Privileges
+database  schema  object  grantee  privileges
 
 query TTTTT colnames
 SHOW GRANTS ON empty.*, b.*
 ----
-Database  Schema  Table  User    Privileges
-b         public  t      admin   ALL
-b         public  t      millie  ALL
-b         public  t      root    ALL
-b         public  t2     admin   ALL
-b         public  t2     root    ALL
+database  schema  object  grantee  privileges
+b         public  t       admin    ALL
+b         public  t       millie   ALL
+b         public  t       root     ALL
+b         public  t2      admin    ALL
+b         public  t2      root     ALL

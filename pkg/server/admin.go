@@ -416,8 +416,8 @@ func (s *adminServer) TableDetails(
 	}
 	{
 		const (
-			userCol       = "User"
-			privilegesCol = "Privileges"
+			userCol       = "grantee"
+			privilegesCol = "privileges"
 		)
 		scanner := makeResultScanner(cols)
 		for _, row := range rows {

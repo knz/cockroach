@@ -32,10 +32,19 @@ func (p *planner) ShowGrants(ctx context.Context, n *tree.ShowGrants) (planNode,
 	var params []string
 	var initCheck func(context.Context) error
 
-	const dbPrivQuery = `SELECT table_catalog AS "Database", table_schema as "Schema", grantee AS "User", privilege_type AS "Privileges" ` +
-		`FROM "".information_schema.schema_privileges`
-	const tablePrivQuery = `SELECT table_catalog as "Database", table_schema AS "Schema", table_name AS "Table", grantee AS "User", privilege_type AS "Privileges" ` +
-		`FROM "".information_schema.table_privileges`
+	const dbPrivQuery = `
+SELECT table_catalog AS database,
+       table_schema AS schema,
+       grantee,
+       privilege_type AS privileges
+  FROM "".information_schema.schema_privileges`
+	const tablePrivQuery = `
+SELECT table_catalog AS database,
+       table_schema AS schema,
+       table_name AS object,
+       grantee,
+       privilege_type AS privileges
+FROM "".information_schema.table_privileges`
 
 	var source bytes.Buffer
 	var cond bytes.Buffer
@@ -66,7 +75,7 @@ func (p *planner) ShowGrants(ctx context.Context, n *tree.ShowGrants) (planNode,
 			// the result columns must still be defined.
 			cond.WriteString(`WHERE false`)
 		} else {
-			fmt.Fprintf(&cond, `WHERE "Database" IN (%s)`, strings.Join(params, ","))
+			fmt.Fprintf(&cond, `WHERE database IN (%s)`, strings.Join(params, ","))
 		}
 	} else {
 		fmt.Fprint(&source, tablePrivQuery)
@@ -111,17 +120,17 @@ func (p *planner) ShowGrants(ctx context.Context, n *tree.ShowGrants) (planNode,
 				// the result columns must still be defined.
 				cond.WriteString(`WHERE false`)
 			} else {
-				fmt.Fprintf(&cond, `WHERE ("Database", "Schema", "Table") IN (%s)`, strings.Join(params, ","))
+				fmt.Fprintf(&cond, `WHERE (database, schema, object) IN (%s)`, strings.Join(params, ","))
 			}
 		} else {
 			// No target: only look at tables and schemas in the current database.
 			source.WriteString(` UNION ALL ` +
-				`SELECT "Database", "Schema", NULL::STRING AS "Table", "User", "Privileges" FROM (`)
+				`SELECT database, schema, NULL::STRING AS object, grantee, privileges FROM (`)
 			source.WriteString(dbPrivQuery)
 			source.WriteByte(')')
 			// If the current database is set, restrict the command to it.
 			if p.CurrentDatabase() != "" {
-				fmt.Fprintf(&cond, ` WHERE "Database" = %s`, lex.EscapeSQLString(p.CurrentDatabase()))
+				fmt.Fprintf(&cond, ` WHERE database = %s`, lex.EscapeSQLString(p.CurrentDatabase()))
 			} else {
 				cond.WriteString(`WHERE true`)
 			}
@@ -133,7 +142,7 @@ func (p *planner) ShowGrants(ctx context.Context, n *tree.ShowGrants) (planNode,
 		for _, grantee := range n.Grantees.ToStrings() {
 			params = append(params, lex.EscapeSQLString(grantee))
 		}
-		fmt.Fprintf(&cond, ` AND "User" IN (%s)`, strings.Join(params, ","))
+		fmt.Fprintf(&cond, ` AND grantee IN (%s)`, strings.Join(params, ","))
 	}
 	return p.delegateQuery(ctx, "SHOW GRANTS",
 		fmt.Sprintf("SELECT * FROM (%s) %s ORDER BY %s", source.String(), cond.String(), orderBy),
