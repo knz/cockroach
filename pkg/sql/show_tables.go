@@ -41,7 +41,7 @@ func (p *planner) ShowTables(ctx context.Context, n *tree.ShowTables) (planNode,
 	}
 
 	const getTablesQuery = `
-				SELECT table_name AS "Table"
+				SELECT table_name AS name
 				FROM %[1]s.information_schema.tables
 				WHERE table_schema = %[2]s
 				ORDER BY table_schema, table_name`
