@@ -60,13 +60,8 @@ var errSavepointNotUsed = pgerror.NewErrorf(
 // res: Used to produce query results.
 // pinfo: The values to use for the statement's placeholders. If nil is passed,
 // 	 then the statement cannot have any placeholder.
-// pos: The position of stmt.
 func (ex *connExecutor) execStmt(
-	ctx context.Context,
-	stmt Statement,
-	res RestrictedCommandResult,
-	pinfo *tree.PlaceholderInfo,
-	pos CmdPos,
+	ctx context.Context, stmt Statement, res RestrictedCommandResult, pinfo *tree.PlaceholderInfo,
 ) (fsm.Event, fsm.EventPayload, error) {
 	if log.V(2) || logStatementsExecuteEnabled.Get(&ex.server.cfg.Settings.SV) ||
 		log.HasSpanOrEvent(ctx) {
@@ -1107,7 +1102,9 @@ func (ex *connExecutor) runObserverStatement(
 	case *tree.ShowSyntax:
 		return ex.runShowSyntax(ctx, sqlStmt.Statement, res)
 	case *tree.SetTracing:
-		ex.runSetTracing(ctx, sqlStmt, res)
+		if err := ex.runSetTracing(ctx, sqlStmt); err != nil {
+			res.SetError(err)
+		}
 		return nil
 	default:
 		res.SetError(pgerror.NewErrorf(pgerror.CodeInternalError,
@@ -1151,12 +1148,14 @@ func (ex *connExecutor) runShowTransactionState(
 	return res.AddRow(ctx, tree.Datums{tree.NewDString(state)})
 }
 
-func (ex *connExecutor) runSetTracing(
-	ctx context.Context, n *tree.SetTracing, res RestrictedCommandResult,
-) {
+// runSetTracing executes a SetTracing statement. Since this statement
+// does not produce results it cannot produce communication
+// errors. The only errors it may produce are logical errors.  The
+// caller is responsible for propagating the error to a
+// RestrictedCommandResult via SetErr.
+func (ex *connExecutor) runSetTracing(ctx context.Context, n *tree.SetTracing) error {
 	if len(n.Values) == 0 {
-		res.SetError(fmt.Errorf("set tracing missing argument"))
-		return
+		return fmt.Errorf("set tracing missing argument")
 	}
 
 	modes := make([]string, len(n.Values))
@@ -1164,15 +1163,12 @@ func (ex *connExecutor) runSetTracing(
 		v = unresolvedNameToStrVal(v)
 		strVal, ok := v.(*tree.StrVal)
 		if !ok {
-			res.SetError(fmt.Errorf("expected string for set tracing argument, not %T", v))
-			return
+			return fmt.Errorf("expected string for set tracing argument, not %T", v)
 		}
 		modes[i] = strVal.RawString()
 	}
 
-	if err := ex.enableTracing(modes); err != nil {
-		res.SetError(err)
-	}
+	return ex.enableTracing(modes)
 }
 
 func (ex *connExecutor) enableTracing(modes []string) error {

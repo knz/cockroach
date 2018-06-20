@@ -419,10 +419,11 @@ func (c *conn) handleSimpleQuery(
 	}
 
 	for _, stmt := range stmts {
-		// The CopyFrom statement is special. We need to detect it so we can hand
-		// control of the connection, through the stmtBuf, to a copyMachine, and
-		// block this network routine until control is passed back.
-		if cp, ok := stmt.(*tree.CopyFrom); ok {
+		switch s := stmt.(type) {
+		case *tree.CopyFrom:
+			// The CopyFrom statement is special. We need to detect it so we can hand
+			// control of the connection, through the stmtBuf, to a copyMachine, and
+			// block this network routine until control is passed back.
 			if len(stmts) != 1 {
 				// NOTE(andrei): I don't know if Postgres supports receiving a COPY
 				// together with other statements in the "simple" protocol, but I'd
@@ -437,22 +438,37 @@ func (c *conn) handleSimpleQuery(
 			}
 			copyDone := sync.WaitGroup{}
 			copyDone.Add(1)
-			if err := c.stmtBuf.Push(ctx, sql.CopyIn{Conn: c, Stmt: cp, CopyDone: &copyDone}); err != nil {
+			if err := c.stmtBuf.Push(ctx, sql.CopyIn{Conn: c, Stmt: s, CopyDone: &copyDone}); err != nil {
 				return err
 			}
 			copyDone.Wait()
 			return nil
-		}
-
-		if err := c.stmtBuf.Push(
-			ctx,
-			sql.ExecStmt{
-				Stmt:         stmt,
-				TimeReceived: timeReceived,
-				ParseStart:   startParse,
-				ParseEnd:     endParse,
-			}); err != nil {
-			return err
+		case *tree.ShowTraceForStatement:
+			if err := c.stmtBuf.Push(ctx,
+				sql.ExecShowTrace{
+					ExecStmt: sql.ExecStmt{
+						Stmt:         s.Statement,
+						TimeReceived: timeReceived,
+						ParseStart:   startParse,
+						ParseEnd:     endParse,
+					},
+					SetTracing: parser.SetTracingForOptions(s.TraceType),
+					ShowTrace:  s.ShowTraceForSession,
+				},
+			); err != nil {
+				return err
+			}
+		default:
+			if err := c.stmtBuf.Push(ctx,
+				sql.ExecStmt{
+					Stmt:         stmt,
+					TimeReceived: timeReceived,
+					ParseStart:   startParse,
+					ParseEnd:     endParse,
+				},
+			); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

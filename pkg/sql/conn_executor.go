@@ -1055,28 +1055,71 @@ func (ex *connExecutor) run(ctx context.Context, cancel context.CancelFunc) erro
 		var res ResultBase
 
 		switch tcmd := cmd.(type) {
-		case ExecStmt:
-			if tcmd.Stmt == nil {
-				res = ex.clientComm.CreateEmptyQueryResult(pos)
+		case ExecShowTrace:
+			// To execute a SHOW TRACE FOR statement, we first execute the
+			// statement with tracing enabled and simply logging any
+			// statement result to the trace. Then we execute a SHOW
+			// SESSION TRACE statement as a regular statement.
+
+			// Enable tracing.
+			if err := ex.runSetTracing(ctx, tcmt.TraceConfigStmt); err != nil {
+				ev = eventNonRetriableErr{IsCommit: fsm.False}
+				payload = eventNonRetriableErrPayload{err: err}
+				res = ex.clientComm.CreateErrorResult(pos)
 				break
 			}
-			ex.curStmt = tcmd.Stmt
 
-			stmtRes := ex.clientComm.CreateStatementResult(
-				tcmd.Stmt, NeedRowDesc, pos, nil, /* formatCodes */
-				ex.sessionData.Location, ex.sessionData.BytesEncodeFormat)
-			res = stmtRes
-			curStmt := Statement{AST: tcmd.Stmt}
+			// Everything in this execution will pertain to this statement.
+			// We use ex.Ctx() here which has been changed by runSetTracing() above.
+			tracingCtx := withStatement(ex.Ctx(), ex.curStmt)
 
+			// Now run the statement against the tracing context.
+			silentRes := ex.clientComm.CreateStatementResultSilent(tracingCtx)
+			res = silentRes
 			ex.phaseTimes[sessionQueryReceived] = tcmd.TimeReceived
 			ex.phaseTimes[sessionStartParse] = tcmd.ParseStart
 			ex.phaseTimes[sessionEndParse] = tcmd.ParseEnd
-
-			ctx := withStatement(ex.Ctx(), ex.curStmt)
-			ev, payload, err = ex.execStmt(ctx, curStmt, stmtRes, nil /* pinfo */, pos)
+			ex.curStmt = tcmd.Stmt
+			curStmt := Statement{AST: tcmd.Stmt}
+			ev, payload, err = ex.execStmt(tracingCtx, curStmt, silentRes, nil /* pinfo */)
+			// Process comm errors, if any.
 			if err != nil {
 				return err
 			}
+
+			// If the statement failed, log that fact to the trace and discard the event.
+			if _, ok := ev.(eventNonRetriableErr); ok {
+				log.VEventf(ctx, "traced execution fails with: %v",
+					payload.(payloadWithError).errorCause())
+				ev = nil
+			}
+
+			// Disable tracing. This ensures that ex.Ctx() run by
+			// runExecStmt() below observes the previous (normal) context.
+			if err := ex.runSetTracing(ctx,
+				&tree.SetTracing{Values: []tree.Exprs{tree.NewStrVal("off")}}); err != nil {
+				ev = eventNonRetriableErr{IsCommit: fsm.False}
+				payload = eventNonRetriableErrPayload{err: err}
+				res = ex.clientComm.CreateErrorResult(pos)
+				break
+			}
+
+			if ev != nil {
+				// This was a special statement (e.g. txn start) or retriable err. It's not
+				// clever
+				// the error propagate. We'll need a valid result though.
+				res = ex.clientComm.CreateErrorResult(pos)
+				break
+			}
+
+			// Finally run SHOW SESSION TRACE.
+			showSessionStmt := tcmd.ShowTrace
+			tcmd := tcmd.ExecStmt
+			tcmd.Stmt = showSessionStmt
+			ev, payload, res, err = ex.runExecStmt(tcmd, pos)
+		case ExecStmt:
+			ev, payload, res, err = ex.runExecStmt(tcmd, pos)
+
 		case ExecPortal:
 			// ExecPortal is handled like ExecStmt, except that the placeholder info
 			// is taken from the portal.
@@ -1263,6 +1306,31 @@ func (ex *connExecutor) run(ctx context.Context, cancel context.CancelFunc) erro
 			return err
 		}
 	}
+}
+
+// runExecStmt runs and ExecStmt command.
+func (ex *connExecutor) runExecStmt(
+	tcmd ExecStmt, pos CmdPos,
+) (ev fsm.Event, payload fsm.EventPayload, res ResultBase, err error) {
+	if tcmd.Stmt == nil {
+		res = ex.clientComm.CreateEmptyQueryResult(pos)
+		return ev, payload, res, err
+	}
+	ex.curStmt = tcmd.Stmt
+
+	stmtRes := ex.clientComm.CreateStatementResult(
+		tcmd.Stmt, NeedRowDesc, pos, nil, /* formatCodes */
+		ex.sessionData.Location, ex.sessionData.BytesEncodeFormat)
+	res = stmtRes
+	curStmt := Statement{AST: tcmd.Stmt}
+
+	ex.phaseTimes[sessionQueryReceived] = tcmd.TimeReceived
+	ex.phaseTimes[sessionStartParse] = tcmd.ParseStart
+	ex.phaseTimes[sessionEndParse] = tcmd.ParseEnd
+
+	ctx := withStatement(ex.Ctx(), ex.curStmt)
+	ev, payload, err = ex.execStmt(ctx, curStmt, stmtRes, nil /* pinfo */)
+	return ev, payload, res, err
 }
 
 // updateTxnRewindPosMaybe checks whether the ex.extraTxnState.txnRewindPos

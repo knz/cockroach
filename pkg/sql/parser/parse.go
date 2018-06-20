@@ -51,6 +51,18 @@ var statementTracingOpts = tree.Exprs{
 	tree.NewStrVal("kv"),
 }
 
+// NewSetTracingForOptions creates a SET TRACING statement suitable to
+// execute a SHOW TRACE FOR SESSION statement with the given trace
+// type.
+func NewSetTracingForOptions(traceType blah) *tree.SetTracing {
+	tracingOpts := statementTracingOpts
+	if traceType != tree.ShowTraceKV {
+		// Remove the "kv" option at the end.
+		tracingOpts = tracingOpts[:len(tracingOpts)-1]
+	}
+	return &tree.SetTracing{Values: tracingOpts}
+}
+
 // maybeExpandStatement is responsible for substituting single statements at the top level into
 // zero, one or multiple statements.
 func maybeExpandStatement(list []tree.Statement, stmt tree.Statement) []tree.Statement {

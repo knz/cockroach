@@ -155,6 +155,23 @@ func (e ExecStmt) String() string {
 
 var _ Command = ExecStmt{}
 
+// ExecShowTrace is the command for running a query sent through the "simple" pgwire
+// protocol.
+type ExecShowTrace struct {
+	ExecStmt
+	SetTracing *tree.SetTracing
+	ShowTrace  tree.Statement
+}
+
+// command implements the Command interface.
+func (ExecShowTrace) command() {}
+
+func (e ExecShowTrace) String() string {
+	return fmt.Sprintf("ExecShowTrace: %s", e.Stmt.String())
+}
+
+var _ Command = ExecShowTrace{}
+
 // ExecPortal is the Command for executing a portal.
 type ExecPortal struct {
 	Name string

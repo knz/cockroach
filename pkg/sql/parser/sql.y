@@ -3030,16 +3030,34 @@ show_trace_stmt:
 | SHOW opt_compact EXPERIMENTAL_REPLICA error // SHOW HELP: SHOW TRACE
 | SHOW opt_compact TRACE FOR explainable_stmt
   {
-    $$.val = &tree.ShowTraceForStatement{Statement: $5.stmt(), ShowTraceForSession: &tree.ShowTraceForSession{TraceType: tree.ShowTraceRaw, Compact: $2.bool()}}
+    $$.val = &tree.ShowTraceForStatement{
+      Statement: $5.stmt(),
+      ShowTraceForSession: &tree.ShowTraceForSession{
+         TraceType: tree.ShowTraceRaw,
+         Compact: $2.bool(),
+      },
+    }
   }
 | SHOW opt_compact KV TRACE FOR explainable_stmt
   {
-    $$.val = &tree.ShowTraceForStatement{Statement: $6.stmt(), ShowTraceForSession: &tree.ShowTraceForSession{TraceType: tree.ShowTraceKV, Compact: $2.bool()}}
+    $$.val = &tree.ShowTraceForStatement{
+      Statement: $6.stmt(),
+      ShowTraceForSession: &tree.ShowTraceForSession{
+        TraceType: tree.ShowTraceKV,
+        Compact: $2.bool(),
+      },
+    }
   }
 | SHOW opt_compact EXPERIMENTAL_REPLICA TRACE FOR explainable_stmt
   {
     /* SKIP DOC */
-    $$.val = &tree.ShowTraceForStatement{Statement: $6.stmt(), ShowTraceForSession: &tree.ShowTraceForSession{TraceType: tree.ShowTraceReplica, Compact: $2.bool()}}
+    $$.val = &tree.ShowTraceForStatement{
+      Statement: $6.stmt(),
+      ShowTraceForSession: &tree.ShowTraceForSession{
+        TraceType: tree.ShowTraceReplica,
+        Compact: $2.bool(),
+      },
+    }
   }
 
 opt_compact:
