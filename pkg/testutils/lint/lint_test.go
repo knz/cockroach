@@ -221,7 +221,6 @@ func TestLint(t *testing.T) {
 					":!testutils/lint",
 					":!util/envutil/env.go",
 					":!util/log/clog.go",
-					":!util/color/color.go",
 					":!util/sdnotify/sdnotify_unix.go",
 				},
 			},
@@ -714,7 +713,7 @@ func TestLint(t *testing.T) {
 
 	t.Run("TestCrlfmt", func(t *testing.T) {
 		t.Parallel()
-		ignore := `\.(pb(\.gw)?)|(\.og)\.go|/testdata/`
+		ignore := `(\.pb(\.gw)?|\.og)\.go|/testdata/|sql/parser/sql.go`
 		cmd, stderr, filter, err := dirCmd(pkgDir, "crlfmt", "-ignore", ignore, "-tab", "2", ".")
 		if err != nil {
 			t.Fatal(err)

@@ -1278,11 +1278,13 @@ pkg/sql/lex/reserved_keywords.go: pkg/sql/parser/sql.y pkg/sql/parser/reserved_k
 	awk -f pkg/sql/parser/reserved_keywords.awk < $< > $@.tmp || rm $@.tmp
 	mv -f $@.tmp $@
 	gofmt -s -w $@
+	goimports -w $@
 
 pkg/sql/lex/keywords.go: pkg/sql/parser/sql.y pkg/sql/parser/all_keywords.awk
 	awk -f pkg/sql/parser/all_keywords.awk < $< > $@.tmp || rm $@.tmp
 	mv -f $@.tmp $@
 	gofmt -s -w $@
+	goimports -w $@
 
 # This target will print unreserved_keywords which are not actually
 # used in the grammar.
@@ -1298,11 +1300,13 @@ pkg/sql/parser/helpmap_test.go: pkg/sql/parser/gen/sql-gen.y pkg/sql/parser/help
 	@pkg/sql/parser/help_gen_test.sh < $< >$@.tmp || rm $@.tmp
 	mv -f $@.tmp $@
 	gofmt -s -w $@
+	goimports -w $@
 
 pkg/sql/parser/help_messages.go: pkg/sql/parser/sql.y pkg/sql/parser/help.awk
 	awk -f pkg/sql/parser/help.awk < $< > $@.tmp || rm $@.tmp
 	mv -f $@.tmp $@
 	gofmt -s -w $@
+	goimports -w $@
 
 bin/.docgen_bnfs: bin/docgen
 	docgen grammar bnf docs/generated/sql/bnf --quiet
