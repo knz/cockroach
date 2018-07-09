@@ -888,6 +888,24 @@ func (stmt *ControlJobs) WalkStmt(v Visitor) Statement {
 }
 
 // CopyNode makes a copy of this Statement without recursing in any child Statements.
+func (stmt *ShowSyntaxExtended) CopyNode() *ShowSyntaxExtended {
+	stmtCopy := *stmt
+	stmtCopy.Options = append(KVOptions(nil), stmt.Options...)
+	return &stmtCopy
+}
+
+// WalkStmt is part of the WalkableStmt interface.
+func (stmt *ShowSyntaxExtended) WalkStmt(v Visitor) Statement {
+	ret := stmt
+	opts, changed := walkKVOptions(v, stmt.Options)
+	if changed {
+		ret = stmt.CopyNode()
+		ret.Options = opts
+	}
+	return ret
+}
+
+// CopyNode makes a copy of this Statement without recursing in any child Statements.
 func (stmt *Import) CopyNode() *Import {
 	stmtCopy := *stmt
 	stmtCopy.Files = append(Exprs(nil), stmt.Files...)
@@ -1285,6 +1303,7 @@ var _ WalkableStmt = &Select{}
 var _ WalkableStmt = &SelectClause{}
 var _ WalkableStmt = &SetClusterSetting{}
 var _ WalkableStmt = &SetVar{}
+var _ WalkableStmt = &ShowSyntaxExtended{}
 var _ WalkableStmt = &Update{}
 var _ WalkableStmt = &ValuesClause{}
 var _ WalkableStmt = &CancelQueries{}

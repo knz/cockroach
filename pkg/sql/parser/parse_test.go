@@ -403,6 +403,7 @@ func TestParse(t *testing.T) {
 		{`SHOW TRANSACTION STATUS`},
 
 		{`SHOW SYNTAX 'select 1'`},
+		{`SHOW SYNTAX 'select 1' WITH width = 60`},
 
 		{`PREPARE a AS SELECT 1`},
 		{`PREPARE a (INT) AS SELECT $1`},

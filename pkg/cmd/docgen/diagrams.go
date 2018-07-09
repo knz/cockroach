@@ -386,7 +386,7 @@ var specs = []stmtSpec{
 	{
 		name:   "backup",
 		stmt:   "backup_stmt",
-		inline: []string{"table_pattern_list", "name_list", "opt_as_of_clause", "opt_incremental", "opt_with_options"},
+		inline: []string{"table_pattern_list", "name_list", "opt_as_of_clause", "opt_incremental", "opt_with_options", "with_options"},
 		match:  []*regexp.Regexp{regexp.MustCompile("'BACKUP'")},
 		replace: map[string]string{
 			"non_reserved_word_or_sconst":                     "destination",
@@ -780,7 +780,7 @@ var specs = []stmtSpec{
 	{
 		name:   "restore",
 		stmt:   "restore_stmt",
-		inline: []string{"as_of_clause", "opt_with_options"},
+		inline: []string{"as_of_clause", "opt_with_options", "with_options"},
 		replace: map[string]string{
 			"a_expr_const":                            "timestamp",
 			"string_or_placeholder_list":              "full_backup_location ( | incremental_backup_location ( ',' incremental_backup_location )*)",

@@ -18,6 +18,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/cockroachdb/cockroach/pkg/config"
 	"github.com/cockroachdb/cockroach/pkg/internal/client"
 	"github.com/cockroachdb/cockroach/pkg/security"
@@ -33,7 +35,6 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/hlc"
 	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/cockroach/pkg/util/mon"
-	"github.com/pkg/errors"
 )
 
 // extendedEvalCtx extends tree.EvalContext with fields that are just needed in
@@ -424,6 +425,21 @@ func (p *planner) TypeAsString(e tree.Expr, op string) (func() (string, error), 
 		return string(*str), nil
 	}
 	return fn, nil
+}
+
+// TypeAs enforces (not hints) that the given expression typechecks as
+// the given type and returns a function that can be called to get the
+// value during (planNode).Start.
+func (p *planner) TypeAs(
+	e tree.Expr, requiredType types.T, op string,
+) (func() (tree.Datum, error), error) {
+	typedE, err := tree.TypeCheckAndRequire(e, &p.semaCtx, requiredType, op)
+	if err != nil {
+		return nil, err
+	}
+	return func() (tree.Datum, error) {
+		return typedE.Eval(p.EvalContext())
+	}, nil
 }
 
 // TypeAsStringOpts enforces (not hints) that the given expressions

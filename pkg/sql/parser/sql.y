@@ -732,7 +732,7 @@ func newNameFromStr(s string) *tree.Name {
 
 %type <[]string> opt_incremental
 %type <tree.KVOption> kv_option
-%type <[]tree.KVOption> kv_option_list opt_with_options
+%type <[]tree.KVOption> kv_option_list opt_with_options with_options
 %type <str> import_format
 
 %type <*tree.Select> select_no_parens
@@ -1739,6 +1739,10 @@ kv_option_list:
   }
 
 opt_with_options:
+  with_options {}
+| /* EMPTY */  {}
+
+with_options:
   WITH kv_option_list
   {
     $$.val = $2.kvOptions()
@@ -1747,7 +1751,6 @@ opt_with_options:
   {
     $$.val = $4.kvOptions()
   }
-| /* EMPTY */ {}
 
 copy_from_stmt:
   COPY table_name opt_column_list FROM STDIN
@@ -3119,14 +3122,22 @@ show_schemas_stmt:
   }
 | SHOW SCHEMAS error // SHOW HELP: SHOW SCHEMAS
 
-// %Help: SHOW SYNTAX - analyze SQL syntax
+// %Help: SHOW SYNTAX - analyze and format SQL syntax
 // %Category: Misc
-// %Text: SHOW SYNTAX <string>
+// %Text: SHOW SYNTAX <string> [ WITH <option> [= <value>] [, ...] ]
 show_syntax_stmt:
   SHOW SYNTAX SCONST
   {
     /* SKIP DOC */
     $$.val = &tree.ShowSyntax{Statement: $3}
+  }
+| SHOW SYNTAX SCONST with_options
+  {
+    /* SKIP DOC */
+    $$.val = &tree.ShowSyntaxExtended{
+        ShowSyntax: tree.ShowSyntax{Statement: $3},
+        Options: $4.kvOptions(),
+    }
   }
 | SHOW SYNTAX error // SHOW HELP: SHOW SYNTAX
 

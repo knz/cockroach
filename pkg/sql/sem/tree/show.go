@@ -310,6 +310,25 @@ func (node *ShowSyntax) Format(ctx *FmtCtx) {
 	ctx.WriteString(lex.EscapeSQLString(node.Statement))
 }
 
+// ShowSyntaxExtended represents a SHOW SYNTAX ... WITH ...
+// statement. This is separate from ShowSyntax because ShowSyntax gets
+// special treatment in the executor (it can be executed even in
+// aborted transactions) and ShowSyntaxExtended cannot receive the
+// same treatment.
+type ShowSyntaxExtended struct {
+	ShowSyntax ShowSyntax
+	Options    KVOptions
+}
+
+// Format implements the NodeFormatter interface.
+func (node *ShowSyntaxExtended) Format(ctx *FmtCtx) {
+	ctx.FormatNode(&node.ShowSyntax)
+	if node.Options != nil {
+		ctx.WriteString(" WITH ")
+		ctx.FormatNode(&node.Options)
+	}
+}
+
 // ShowTransactionStatus represents a SHOW TRANSACTION STATUS statement.
 type ShowTransactionStatus struct {
 }

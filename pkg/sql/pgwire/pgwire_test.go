@@ -748,6 +748,13 @@ func TestPGPreparedQuery(t *testing.T) {
 		"SHOW USERS": {
 			baseTest.Results("root"),
 		},
+		"SHOW SYNTAX 'select 1'": {
+			baseTest.Results("sql", "SELECT 1"),
+		},
+		"SHOW SYNTAX 'select (1+2)' WITH simplify = $1": {
+			baseTest.SetArgs(true).Results("sql", "SELECT 1 + 2"),
+			baseTest.SetArgs(false).Results("sql", "SELECT (1 + 2)"),
+		},
 		"SELECT (SELECT 1+$1)": {
 			baseTest.SetArgs(1).Results(2),
 		},

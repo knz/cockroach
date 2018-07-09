@@ -1089,12 +1089,9 @@ func (ex *connExecutor) runObserverStatement(
 func (ex *connExecutor) runShowSyntax(
 	ctx context.Context, stmt string, res RestrictedCommandResult,
 ) error {
-	res.SetColumns(ctx, sqlbase.ResultColumns{
-		{Name: "field", Typ: types.String},
-		{Name: "message", Typ: types.String},
-	})
+	res.SetColumns(ctx, showSyntaxColumns)
 	var commErr error
-	if err := runShowSyntax(ctx, stmt,
+	if err := runShowSyntax(ctx, stmt, defaultShowSyntaxOpts,
 		func(ctx context.Context, field, msg string) error {
 			commErr = res.AddRow(ctx, tree.Datums{tree.NewDString(field), tree.NewDString(msg)})
 			return nil
