@@ -42,12 +42,12 @@ const DefaultPrettyWidth = 60
 
 // Pretty pretty prints stmt with default options.
 func Pretty(stmt NodeFormatter) string {
-	return PrettyWithOpts(stmt, DefaultPrettyWidth, true, 4, true /* simplify */)
+	return PrettyWithOpts(stmt, DefaultPrettyWidth, true, 4, true /* simplify */, FmtRoundtrip)
 }
 
 // PrettyWithOpts pretty prints stmt with specified options.
 func PrettyWithOpts(
-	stmt NodeFormatter, lineWidth int, useTabs bool, tabWidth int, simplify bool,
+	stmt NodeFormatter, lineWidth int, useTabs bool, tabWidth int, simplify bool, fmtFlags FmtFlags,
 ) string {
 	var tab string
 	if useTabs {
@@ -59,6 +59,7 @@ func PrettyWithOpts(
 		Tab:      tab,
 		TabWidth: tabWidth,
 		Simplify: simplify,
+		FmtFlags: fmtFlags,
 	}
 	doc := cfg.Doc(stmt)
 	return pretty.Pretty(doc, lineWidth)
@@ -73,6 +74,9 @@ type PrettyCfg struct {
 	TabWidth int
 	// Simplify, when set, removes extraneous parentheses.
 	Simplify bool
+	// FmtFlags are the Format flags used when rendering nodes
+	// that do not have a doc() method.
+	FmtFlags FmtFlags
 }
 
 // Doc converts f (generally a Statement) to a pretty.Doc. If f does not have a
@@ -86,8 +90,7 @@ func (p PrettyCfg) Doc(f NodeFormatter) pretty.Doc {
 }
 
 func (p PrettyCfg) docAsString(f NodeFormatter) pretty.Doc {
-	const prettyFlags = FmtShowPasswords | FmtParsable
-	return pretty.Text(AsStringWithFlags(f, prettyFlags))
+	return pretty.Text(AsStringWithFlags(f, p.FmtFlags))
 }
 
 func (p PrettyCfg) nestName(a, b pretty.Doc) pretty.Doc {

@@ -117,6 +117,11 @@ const (
 	// expressions).
 	FmtParsable FmtFlags = fmtDisambiguateDatumTypes
 
+	// FmtRoundtrip instructs the pretty printer do not omit any
+	// information when rendering, so that the resulting AST is
+	// equivalent as the original form.
+	FmtRoundtrip FmtFlags = FmtParsable | FmtShowPasswords
+
 	// FmtCheckEquivalence instructs the pretty-printer to produce a representation
 	// that can be used to check equivalence of expressions. Specifically:
 	//  - IndexedVars are formatted using symbolic notation (to disambiguate
