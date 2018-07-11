@@ -313,6 +313,11 @@ func (b *Builder) buildScalarHelper(
 		// Treat ParenExpr as if it wasn't present.
 		return b.buildScalarHelper(t.TypedInnerExpr(), label, inScope, outScope)
 
+	case *tree.ColumnAccessExpr:
+		out = b.factory.ConstructColumnAccess(
+			b.buildScalarHelper(t.TypedInnerExpr(), "", inScope, nil),
+			memo.PrivateID(t.ColIndex))
+
 	case *tree.Placeholder:
 		if b.evalCtx.HasPlaceholders() {
 			// Replace placeholders with their value.

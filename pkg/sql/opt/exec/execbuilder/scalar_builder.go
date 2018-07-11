@@ -52,6 +52,7 @@ func init() {
 		opt.CaseOp:            (*Builder).buildCase,
 		opt.CastOp:            (*Builder).buildCast,
 		opt.CoalesceOp:        (*Builder).buildCoalesce,
+		opt.ColumnAccessOp:    (*Builder).buildColumnAccess,
 		opt.ArrayOp:           (*Builder).buildArray,
 		opt.AnyOp:             (*Builder).buildAny,
 		opt.UnsupportedExprOp: (*Builder).buildUnsupportedExpr,
@@ -286,6 +287,21 @@ func (b *Builder) buildCoalesce(ctx *buildScalarCtx, ev memo.ExprView) (tree.Typ
 		}
 	}
 	return tree.NewTypedCoalesceExpr(exprs, ev.Logical().Scalar.Type), nil
+}
+
+func (b *Builder) buildColumnAccess(ctx *buildScalarCtx, ev memo.ExprView) (tree.TypedExpr, error) {
+	subExpr := ev.Child(0)
+	input, err := b.buildScalar(ctx, subExpr)
+	if err != nil {
+		return nil, err
+	}
+	subTyp := subExpr.Logical().Scalar.Type.(types.TTuple)
+	colIdx := int(ev.Private().(opt.ColumnID))
+	lbl := ""
+	if colIdx < len(subTyp.Labels) {
+		lbl = subTyp.Labels[colIdx]
+	}
+	return tree.NewTypedColumnAccessExpr(input, lbl, colIdx), nil
 }
 
 func (b *Builder) buildArray(ctx *buildScalarCtx, ev memo.ExprView) (tree.TypedExpr, error) {

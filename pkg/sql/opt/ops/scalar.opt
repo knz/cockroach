@@ -510,6 +510,12 @@ define Function {
 }
 
 [Scalar]
+define ColumnAccess {
+    Input Expr
+    Col   ColumnID
+}
+
+[Scalar]
 define Coalesce {
     Args ExprList
 }
