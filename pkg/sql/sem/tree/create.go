@@ -1038,6 +1038,9 @@ func (node *SequenceOptions) Format(ctx *FmtCtx) {
 			ctx.Printf("%d", *option.IntVal)
 		case SeqOptVirtual:
 			ctx.WriteString(option.Name)
+		case SeqOptOwnedBy:
+			ctx.WriteString(option.Name)
+			ctx.WriteString(" unsupported_see_issue_26382")
 		default:
 			panic(fmt.Sprintf("unexpected SequenceOption: %v", option))
 		}

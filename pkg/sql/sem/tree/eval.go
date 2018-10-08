@@ -3377,16 +3377,20 @@ func PerformCast(ctx *EvalContext, d Datum, t coltypes.CastTargetType) (Datum, e
 				}
 				return queryOid(ctx, typ, NewDString(funcDef.Name))
 			case coltypes.RegType:
-				colType, err := ctx.Planner.ParseType(s)
+				s = pgSignatureRegexp.ReplaceAllString(s, "$1")
+				d, err := queryOid(ctx, typ, NewDString(s))
 				if err == nil {
-					datumType := coltypes.CastTargetToDatumType(colType)
-					return &DOid{semanticType: typ, DInt: DInt(datumType.Oid()), name: datumType.SQLName()}, nil
+					return d, nil
 				}
+				colType, err := ctx.Planner.ParseType(s)
+				if err != nil {
+					return nil, err
+				}
+				datumType := coltypes.CastTargetToDatumType(colType)
+				return &DOid{semanticType: typ, DInt: DInt(datumType.Oid()), name: datumType.SQLName()}, nil
 				// Fall back to searching pg_type, since we don't provide syntax for
 				// every postgres type that we understand OIDs for.
 				// Trim type modifiers, e.g. `numeric(10,3)` becomes `numeric`.
-				s = pgSignatureRegexp.ReplaceAllString(s, "$1")
-				return queryOid(ctx, typ, NewDString(s))
 
 			case coltypes.RegClass:
 				tn, err := ctx.Planner.ParseQualifiedTableName(ctx.Ctx(), origS)

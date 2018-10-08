@@ -4389,7 +4389,8 @@ sequence_option_elem:
 | CYCLE                        { /* SKIP DOC */
                                  $$.val = tree.SequenceOption{Name: tree.SeqOptCycle} }
 | NO CYCLE                     { $$.val = tree.SequenceOption{Name: tree.SeqOptNoCycle} }
-| OWNED BY column_path         { return unimplementedWithIssue(sqllex, 26382) }
+| OWNED BY column_path         { /* SKIP DOC */
+                                 $$.val = tree.SequenceOption{Name: tree.SeqOptOwnedBy} } // return unimplemented(sqllex, "create sequence OWNED BY option") }
 | CACHE signed_iconst64        { /* SKIP DOC */
                                  x := $2.int64()
                                  $$.val = tree.SequenceOption{Name: tree.SeqOptCache, IntVal: &x} }

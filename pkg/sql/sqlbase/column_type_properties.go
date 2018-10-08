@@ -25,6 +25,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/pgerror"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/types"
+	"github.com/lib/pq/oid"
 	"github.com/pkg/errors"
 )
 
@@ -308,6 +309,49 @@ func (c *ColumnType) SQLString() string {
 		return c.VisibleType.String()
 	}
 	return c.SemanticType.String()
+}
+
+func (c *ColumnType) InformationSchemaUdtName() string {
+	switch c.SemanticType {
+	case ColumnType_INT:
+		switch c.Width {
+		case 16:
+			return "smallint"
+		case 64:
+			return "bigint"
+		default:
+			// We report "integer" both for int4 and int.  This is probably
+			// lying a bit, but it will appease clients that feed "int" into
+			// their CREATE TABLE and expect the pg "integer" name to come
+			// up in information_schema.
+			return "integer"
+		}
+
+	case ColumnType_STRING, ColumnType_COLLATEDSTRING:
+		switch c.VisibleType {
+		case ColumnType_VARCHAR:
+			return "varchar"
+		case ColumnType_CHAR:
+			return "bpchar"
+		case ColumnType_QCHAR:
+			// Not the same as "character". Beware.
+			return "char"
+		}
+		return "text"
+
+	case ColumnType_FLOAT:
+		width, _ := c.FloatProperties()
+
+		switch width {
+		case 64:
+			return "float8"
+		case 32:
+			return "float4"
+		default:
+			panic(fmt.Sprintf("programming error: unknown float width: %d", width))
+		}
+	}
+	return strings.ToLower(oid.TypeName[c.ToDatumType().Oid()])
 }
 
 // InformationSchemaVisibleType returns the string suitable to

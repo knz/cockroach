@@ -288,6 +288,7 @@ var informationSchemaColumnPrivileges = virtualSchemaTable{
 var informationSchemaColumnsTable = virtualSchemaTable{
 	schema: vtable.InformationSchemaColumns,
 	populate: func(ctx context.Context, p *planner, dbContext *DatabaseDescriptor, addRow func(...tree.Datum) error) error {
+		pgCatalogNameStr := tree.NewDString(sessiondata.PgCatalogName)
 		return forEachTableDesc(ctx, p, dbContext, virtualMany, func(db *sqlbase.DatabaseDescriptor, scName string, table *sqlbase.TableDescriptor) error {
 			dbNameStr := tree.NewDString(db.Name)
 			scNameStr := tree.NewDString(scName)
@@ -296,13 +297,13 @@ var informationSchemaColumnsTable = virtualSchemaTable{
 			return forEachColumnInTable(table, func(column *sqlbase.ColumnDescriptor) error {
 				visible++
 				return addRow(
-					dbNameStr,                            // table_catalog
-					scNameStr,                            // table_schema
-					tree.NewDString(table.Name),          // table_name
-					tree.NewDString(column.Name),         // column_name
-					tree.NewDInt(tree.DInt(visible)),     // ordinal_position, 1-indexed
-					dStringPtrOrNull(column.DefaultExpr), // column_default
-					yesOrNoDatum(column.Nullable),        // is_nullable
+					dbNameStr,                                                   // table_catalog
+					scNameStr,                                                   // table_schema
+					tree.NewDString(table.Name),                                 // table_name
+					tree.NewDString(column.Name),                                // column_name
+					tree.NewDInt(tree.DInt(visible)),                            // ordinal_position, 1-indexed
+					dStringPtrOrNull(column.DefaultExpr),                        // column_default
+					yesOrNoDatum(column.Nullable),                               // is_nullable
 					tree.NewDString(column.Type.InformationSchemaVisibleType()), // data_type
 					characterMaximumLength(column.Type),                         // character_maximum_length
 					characterOctetLength(column.Type),                           // character_octet_length
@@ -316,6 +317,9 @@ var informationSchemaColumnsTable = virtualSchemaTable{
 					tree.DNull,                                                  // domain_catalog
 					tree.DNull,                                                  // domain_schema
 					tree.DNull,                                                  // domain_name
+					dbNameStr,                                                   // udt_catalog
+					pgCatalogNameStr,                                            // udt_schema
+					tree.NewDString(column.Type.InformationSchemaUdtName()),     // udt_name
 					dStringPtrOrEmpty(column.ComputeExpr),                       // generation_expression
 					yesOrNoDatum(column.Hidden),                                 // is_hidden
 					tree.NewDString(column.Type.SQLString()),                    // crdb_sql_type
