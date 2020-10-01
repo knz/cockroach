@@ -1445,9 +1445,20 @@ func (ex *connExecutor) execCmd(ctx context.Context) error {
 
 	switch tcmd := cmd.(type) {
 	case ExecStmt:
-		ex.phaseTimes[sessionQueryReceived] = tcmd.TimeReceived
-		ex.phaseTimes[sessionStartParse] = tcmd.ParseStart
-		ex.phaseTimes[sessionEndParse] = tcmd.ParseEnd
+		// Initialize the stats collector.
+		// This also populates the statsCollector's txn-level .phaseTimes from ex.phaseTimes.
+		ex.statsCollector.reset(&ex.server.sqlStats, ex.appStats, &ex.phaseTimes)
+
+		// Initialize timings for this statement.
+		// Note: we write to ex.statsCollector.phaseTimes, instead of ex.phaseTimes,
+		// because:
+		// - stats use ex.statsCollector, not ex.phasetimes.
+		// - ex.statsCollector merely contains a copy of the times, that
+		//   was created above. The stats collection don't look at
+		//   ex.phaseTimes.
+		ex.statsCollector.phaseTimes[sessionQueryReceived] = tcmd.TimeReceived
+		ex.statsCollector.phaseTimes[sessionStartParse] = tcmd.ParseStart
+		ex.statsCollector.phaseTimes[sessionEndParse] = tcmd.ParseEnd
 
 		// We use a closure for the body of the execution so as to
 		// guarantee that the full service time is captured below.
@@ -1476,12 +1487,6 @@ func (ex *connExecutor) execCmd(ctx context.Context) error {
 			ev, payload, err = ex.execStmt(stmtCtx, curStmt, stmtRes, nil /* pinfo */)
 			return err
 		}()
-		// Note: we write to ex.statsCollector.phaseTimes, instead of ex.phaseTimes,
-		// because:
-		// - stats use ex.statsCollector, not ex.phasetimes.
-		// - ex.statsCollector merely contains a copy of the times, that
-		//   was created when the statement started executing (via the
-		//   reset() method).
 		ex.statsCollector.phaseTimes[sessionQueryServiced] = timeutil.Now()
 		if err != nil {
 			return err
@@ -1491,6 +1496,16 @@ func (ex *connExecutor) execCmd(ctx context.Context) error {
 		// ExecPortal is handled like ExecStmt, except that the placeholder info
 		// is taken from the portal.
 
+		// Initialize the stats collector.
+		// This also populates the statsCollector's txn-level .phaseTimes from ex.phaseTimes.
+		ex.statsCollector.reset(&ex.server.sqlStats, ex.appStats, &ex.phaseTimes)
+		// Initialize timings for this statement.
+		// Note: we write to ex.statsCollector.phaseTimes, instead of ex.phaseTimes,
+		// because:
+		// - stats use ex.statsCollector, not ex.phasetimes.
+		// - ex.statsCollector merely contains a copy of the times, that
+		//   was created above. The stats collection don't look at
+		//   ex.phaseTimes.
 		ex.phaseTimes[sessionQueryReceived] = tcmd.TimeReceived
 		// When parsing has been done earlier, via a separate parse
 		// message, it is not any more part of the statistics collected
@@ -1498,6 +1513,7 @@ func (ex *connExecutor) execCmd(ctx context.Context) error {
 		// parsing took no time.
 		ex.phaseTimes[sessionStartParse] = time.Time{}
 		ex.phaseTimes[sessionEndParse] = time.Time{}
+
 		// We use a closure for the body of the execution so as to
 		// guarantee that the full service time is captured below.
 		err := func() error {
@@ -1544,12 +1560,6 @@ func (ex *connExecutor) execCmd(ctx context.Context) error {
 			ev, payload, err = ex.execPortal(ctx, portal, portalName, stmtRes, pinfo)
 			return err
 		}()
-		// Note: we write to ex.statsCollector.phaseTimes, instead of ex.phaseTimes,
-		// because:
-		// - stats use ex.statsCollector, not ex.phasetimes.
-		// - ex.statsCollector merely contains a copy of the times, that
-		//   was created when the statement started executing (via the
-		//   reset() method).
 		ex.statsCollector.phaseTimes[sessionQueryServiced] = timeutil.Now()
 		if err != nil {
 			return err
