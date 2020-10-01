@@ -39,20 +39,23 @@ const (
 	sessionInit sessionPhase = iota
 
 	// Executor phases.
-	sessionQueryReceived                  // Query is received.
-	sessionStartParse                     // Parse starts.
-	sessionEndParse                       // Parse ends.
-	plannerStartLogicalPlan               // Planning starts.
-	plannerEndLogicalPlan                 // Planning ends.
-	plannerStartExecStmt                  // Execution starts.
-	plannerEndExecStmt                    // Execution ends.
+	sessionQueryReceived    // Query is received.
+	sessionStartParse       // Parse starts.
+	sessionEndParse         // Parse ends.
+	plannerStartLogicalPlan // Planning starts.
+	plannerEndLogicalPlan   // Planning ends.
+	plannerStartExecStmt    // Execution starts.
+	plannerEndExecStmt      // Execution ends.
+	// Query is serviced. Note that we compute this even for empty queries or
+	// "special" statements that have no execution, like SHOW TRANSACTION STATUS.
+	sessionQueryServiced
+
 	sessionTransactionReceived            // Transaction is received.
 	sessionFirstStartExecTransaction      // Transaction is started for the first time.
 	sessionMostRecentStartExecTransaction // Transaction is started for the most recent time.
 	sessionEndExecTransaction             // Transaction is committed/rolled back.
 	sessionStartTransactionCommit         // Transaction `COMMIT` starts.
 	sessionEndTransactionCommit           // Transaction `COMMIT` ends.
-	sessionQueryServiced                  // Query is serviced.
 
 	// sessionNumPhases must be listed last so that it can be used to
 	// define arrays sufficiently large to hold all the other values.
@@ -66,16 +69,8 @@ const (
 type phaseTimes [sessionNumPhases]time.Time
 
 // getServiceLatency returns the time between a query being received and the end
-// of run.
+// of execution.
 func (p *phaseTimes) getServiceLatency() time.Duration {
-	return p[plannerEndExecStmt].Sub(p[sessionQueryReceived])
-}
-
-// getStatementServiceLatency returns the time between a query being received
-// and being serviced. This is required to provide accurate query statistics to
-// the CLI, as all queries don't hit the execution engine and therefore can't
-// rely on the getServiceLatency method above.
-func (p *phaseTimes) getStatementServiceLatency() time.Duration {
 	return p[sessionQueryServiced].Sub(p[sessionQueryReceived])
 }
 
