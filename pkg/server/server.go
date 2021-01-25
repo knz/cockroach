@@ -613,6 +613,10 @@ func NewServer(cfg Config, stopper *stop.Stopper) (*Server, error) {
 	)
 	// TODO(tbg): don't pass all of Server into this to avoid this hack.
 	sAuth := newAuthenticationServer(lateBoundServer)
+
+	// FIXME: call this in a loop in the background
+	sAuth.loadDataFromFile(ctx)
+
 	for i, gw := range []grpcGatewayServer{sAdmin, sStatus, sAuth, &sTS} {
 		if reflect.ValueOf(gw).IsNil() {
 			return nil, errors.Errorf("%d: nil", i)

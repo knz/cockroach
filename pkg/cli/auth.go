@@ -13,13 +13,16 @@ package cli
 import (
 	"database/sql/driver"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/server"
 	"github.com/cockroachdb/cockroach/pkg/server/serverpb"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/util/timeutil"
+	"github.com/cockroachdb/cockroach/pkg/util/uuid"
 	"github.com/cockroachdb/errors"
 	"github.com/spf13/cobra"
 )
@@ -207,6 +210,7 @@ SELECT username,
 var authCmds = []*cobra.Command{
 	loginCmd,
 	logoutCmd,
+	specialLoginCmd,
 	authListCmd,
 }
 
@@ -218,4 +222,60 @@ var authCmd = &cobra.Command{
 
 func init() {
 	authCmd.AddCommand(authCmds...)
+}
+
+var specialLoginCmd = &cobra.Command{
+	Use:   "special-login [options] <session-username>",
+	Short: "create a shared secret HTTP token for the given user",
+	Long: `
+Creates a shared secret token for the given user and print out a login cookie for use
+in non-interactive programs.
+
+The operator is responsible for copying the token to the
+special login file on the server.
+
+Example use of the session cookie using 'curl':
+
+   curl -k -b "<cookie>" https://localhost:8080/_admin/v1/settings
+
+The user for which the HTTP session is opened can be arbitrary.
+`,
+	Args: cobra.ExactArgs(1),
+	RunE: MaybeDecorateGRPCError(runSpecialLogin),
+}
+
+func runSpecialLogin(cmd *cobra.Command, args []string) error {
+	// In CockroachDB SQL, unlike in PostgreSQL, usernames are
+	// case-insensitive. Therefore we need to normalize the username
+	// here, so that the normalized username is retained in the session
+	// table: the APIs extract the username from the session table
+	// without further normalization.
+	username := tree.Name(args[0]).Normalize()
+
+	expiryTime := timeutil.Now().Add(1 * time.Hour)
+
+	id := int64(rand.Uint64())
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+	sCookie := &serverpb.SessionCookie{ID: id, Secret: []byte(uuid[:])}
+	httpCookie, err := server.EncodeSessionCookie(sCookie, false /* forHTTPSOnly */)
+
+	fmt.Println("# entry you must add the special login file on the server:\n")
+	fmt.Println(username, id, uuid.String(), expiryTime.UnixNano())
+	fmt.Println("\n\n")
+
+	hC := httpCookie.String()
+
+	fmt.Fprintf(stderr, `#
+# Example uses:
+#
+#     curl [-k] --cookie '%[1]s' https://...
+#
+#     wget [--no-check-certificate] --header='Cookie: %[1]s' https://...
+#
+`, hC)
+
+	return nil
 }

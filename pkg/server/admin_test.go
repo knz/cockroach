@@ -41,6 +41,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/server/telemetry"
 	"github.com/cockroachdb/cockroach/pkg/settings"
 	"github.com/cockroachdb/cockroach/pkg/settings/cluster"
+	"github.com/cockroachdb/cockroach/pkg/sql"
 	"github.com/cockroachdb/cockroach/pkg/sql/catalog/descpb"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/testutils"
@@ -2009,4 +2010,124 @@ func TestEndpointTelemetryBasic(t *testing.T) {
 	require.Equal(t, int32(1), telemetry.Read(getServerEndpointCounter(
 		"/cockroach.server.serverpb.Status/Statements",
 	)))
+}
+
+// TestEmergencyAuthentication checks that the HTTP interface can still
+// be made reachable via the emergency authentication mechanism
+// even when the majority of the cluster is unavailable.
+func TestEmergencyAuthentication(t *testing.T) {
+	defer leaktest.AfterTest(t)()
+
+	skip.UnderShort(t, "long test")
+
+	defer log.Scope(t).Close(t)
+
+	ctx := context.Background()
+	tc := serverutils.StartNewTestCluster(t, 3, base.TestClusterArgs{})
+	defer tc.Stopper().Stop(ctx)
+
+	s0 := tc.Server(0).(*TestServer)
+
+	t.Logf("waiting for up-replication")
+	// Wait for the newly created table to spread over all nodes.
+	testutils.SucceedsSoon(t, func() error {
+		return s0.RunLocalSQL(ctx, func(ctx context.Context, ie *sql.InternalExecutor) error {
+			_, err := ie.Exec(ctx, "wait-replication", nil, `
+SELECT -- wait for up-replication.
+       IF(array_length(replicas, 1) != 3,
+          crdb_internal.force_error('UU000', 'not ready: ' || array_length(replicas, 1)::string || ' replicas'),
+          0)
+  FROM crdb_internal.ranges`)
+			if err != nil && !testutils.IsError(err, "not ready") {
+				t.Fatal(err)
+			}
+			return err
+		})
+	})
+
+	t.Logf("creating admin users")
+	// Create two admin users.
+	if err := s0.RunLocalSQL(ctx, func(ctx context.Context, ie *sql.InternalExecutor) error {
+		for _, stmt := range []string{
+			`CREATE USER admin2 WITH PASSWORD 'abc'`,
+			`GRANT admin TO admin2`,
+		} {
+			if _, err := ie.Exec(ctx, "create-admin2", nil, stmt); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	url := debugURL(s0)
+
+	t.Logf("sanity check: ensure that admin1 can use the cluster")
+	// Get cookie for admin1.
+	client1, _, err := s0.getAuthenticatedHTTPClientAndCookie(
+		security.MakeSQLUsernameFromPreNormalizedString("admin1"), true /* isAdmin */)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Sanity check: check that admin1 can do things.
+	{
+		resp, err := client1.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status code %d; got %d", http.StatusOK, resp.StatusCode)
+		}
+	}
+
+	t.Logf("stopping 2/3 nodes")
+	tc.StopServer(1)
+	tc.StopServer(2)
+
+	t.Logf("expecting timeout for admin1")
+	// Try to use client1. We expect the test to time out here.
+	// This timeout is not going to happen immediately: there is a short
+	// amount of time after the other nodes have shut down, where the first
+	// node still has a valid lease on the first range and can read data from
+	// it. Wait until this has expired, by waiting until the HTTP request
+	// actually reaches its timeout.
+	testutils.SucceedsSoon(t, func() error {
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(ctxWithTimeout, "GET", url, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err := client1.Do(req)
+		if err != nil {
+			if !errors.Is(ctxWithTimeout.Err(), context.DeadlineExceeded) {
+				t.Fatal(err)
+			}
+			// Timeout reached: all good.
+			return nil
+		}
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			return errors.New("HTTP service still ready")
+		}
+		return nil
+	})
+
+	t.Logf("verifying that admin2 is shut off from the cluster")
+	func() {
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+
+		_, err := s0.authentication.UserLogin(ctxWithTimeout, &serverpb.UserLoginRequest{
+			Username: "admin2",
+			Password: "abc",
+		})
+		if err == nil {
+			t.Fatalf("expected RPC error, got nil")
+		}
+	}()
 }
