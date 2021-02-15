@@ -16,6 +16,8 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"runtime"
+	"runtime/metrics"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -1148,6 +1150,10 @@ type connExecutor struct {
 	// stmtDiagnosticsRecorder is used to track which queries need to have
 	// information collected.
 	stmtDiagnosticsRecorder *stmtdiagnostics.Registry
+
+	// (Experimental) taskGroup is the Go runtime task group for this
+	// executor's goroutine and children goroutines.
+	taskGroup runtime.InternalTaskGroup
 }
 
 // ctxHolder contains a connection's context and, while session tracing is
@@ -1388,6 +1394,8 @@ func (ex *connExecutor) run(
 	ex.onCancelSession = onCancel
 
 	ex.sessionID = ex.generateID()
+	ex.taskGroup = runtime.SetInternalTaskGroup()
+
 	ex.server.cfg.SessionRegistry.register(ex.sessionID, ex)
 	ex.planner.extendedEvalCtx.setSessionID(ex.sessionID)
 	defer ex.server.cfg.SessionRegistry.deregister(ex.sessionID)
@@ -2482,6 +2490,12 @@ func (ex *connExecutor) serialize() serverpb.Session {
 		remoteStr = ex.sessionData.RemoteAddr.String()
 	}
 
+	taskGroupMetrics := []metrics.Sample{
+		{Name: "/taskgroup/sched/ticks:ticks"},
+		{Name: "/taskgroup/sched/cputime:nanoseconds"},
+	}
+	metrics.ReadTaskGroup(ex.taskGroup, taskGroupMetrics)
+
 	return serverpb.Session{
 		Username:        ex.sessionData.User().Normalized(),
 		ClientAddress:   remoteStr,
@@ -2495,6 +2509,10 @@ func (ex *connExecutor) serialize() serverpb.Session {
 		MaxAllocBytes:   ex.mon.MaximumBytes(),
 
 		LastActiveQueryAnon: lastActiveQueryAnon,
+
+		// Experimental
+		SchedTicks: taskGroupMetrics[0].Value.Uint64(),
+		Nanos:      taskGroupMetrics[1].Value.Uint64(),
 	}
 }
 

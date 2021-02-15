@@ -108,6 +108,8 @@ func setupGenerator(
 
 	wg.Add(1)
 	go func() {
+		// TODO(knz): Fix the panic behavior here.
+		// See: https://github.com/cockroachdb/cockroach/issues/60587
 		defer wg.Done()
 		// We wait until a call to next before starting the worker. This prevents
 		// concurrent transaction usage during the startup phase. We also have to

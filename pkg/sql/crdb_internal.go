@@ -1559,7 +1559,9 @@ CREATE TABLE crdb_internal.%s (
   oldest_query_start TIMESTAMP,      -- the time when the oldest query in the session was started
   kv_txn             STRING,         -- the ID of the current KV transaction
   alloc_bytes        INT,            -- the number of bytes allocated by the session
-  max_alloc_bytes    INT             -- the high water mark of bytes allocated by the session
+  max_alloc_bytes    INT,            -- the high water mark of bytes allocated by the session
+  sched_ticks        INT,            -- the number of scheduler ticks used by the session on the gateway node
+  cpu_time           INTERVAL        -- the number of CPU seconds used by the session on the gateway node
 )
 `
 
@@ -1652,6 +1654,11 @@ func populateSessionsTable(
 			kvTxnIDDatum,
 			tree.NewDInt(tree.DInt(session.AllocBytes)),
 			tree.NewDInt(tree.DInt(session.MaxAllocBytes)),
+			tree.NewDInt(tree.DInt(session.SchedTicks)),
+			tree.NewDInterval(
+				duration.MakeDuration(int64(session.Nanos), 0, 0),
+				types.DefaultIntervalTypeMetadata,
+			),
 		); err != nil {
 			return err
 		}
@@ -1675,6 +1682,7 @@ func populateSessionsTable(
 				tree.DNull,                             // kv_txn
 				tree.DNull,                             // alloc_bytes
 				tree.DNull,                             // max_alloc_bytes
+				tree.DNull,                             // sched_ticks
 			); err != nil {
 				return err
 			}
